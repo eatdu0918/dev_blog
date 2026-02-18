@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { ThemeToggle } from './theme-toggle';
 
 export default function Header() {
     return (
@@ -7,7 +8,10 @@ export default function Header() {
                 <Link href="/" className="text-2xl font-bold tracking-tighter hover:underline">
                     My Dev Blog
                 </Link>
-                <span className="text-zinc-500 text-sm">Next.js & Markdown</span>
+                <div className="flex items-center gap-4">
+                    <span className="text-zinc-500 text-sm hidden sm:inline-block">Next.js & Markdown</span>
+                    <ThemeToggle />
+                </div>
             </div>
         </header>
     );
