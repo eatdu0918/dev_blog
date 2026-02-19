@@ -1,6 +1,7 @@
 ---
 title: '객체 지향 프로그래밍(OOP) 핵심 개념과 코드'
 date: '2026-02-18'
+categories: ['Programming', 'CS']
 ---
 
 # 객체 지향 프로그래밍 (OOP)

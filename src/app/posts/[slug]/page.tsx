@@ -1,4 +1,4 @@
-import { getAllPostIds, getPostData } from '@/lib/posts';
+import { getAllPostIds, getPost } from '@/lib/posts/service';
 import Head from 'next/head';
 import Link from 'next/link';
 // import Date from '../../../components/date'; // Assuming we might add this later
@@ -11,7 +11,7 @@ export async function generateStaticParams() {
 export default async function Post({ params }: { params: Promise<{ slug: string }> }) {
     // Await the params object
     const { slug } = await params;
-    const postData = await getPostData(slug);
+    const postData = await getPost(slug);
 
     return (
         <article className="prose prose-zinc dark:prose-invert max-w-none">

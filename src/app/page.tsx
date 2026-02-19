@@ -1,12 +1,19 @@
 import Link from 'next/link';
-import { getSortedPostsData } from '@/lib/posts';
+import { getAllPosts } from '@/lib/posts/service';
 
-export default function Home() {
-  const allPostsData = getSortedPostsData();
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<{ category?: string }>;
+}) {
+  const { category } = await searchParams;
+  const allPostsData = getAllPosts(category);
 
   return (
     <section>
-      <h2 className="text-3xl font-bold mb-8">Recent Posts</h2>
+      <h2 className="text-3xl font-bold mb-8">
+        {category ? `${category} Posts` : 'Recent Posts'}
+      </h2>
       <div className="space-y-6">
         {allPostsData.map(({ id, date, title }) => (
           <article key={id} className="block group">

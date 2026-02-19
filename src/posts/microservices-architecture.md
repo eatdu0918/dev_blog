@@ -1,6 +1,7 @@
 ---
 title: 'MSA(Microservices Architecture) 란?'
 date: '2026-02-19'
+categories: ['Architecture', 'Backend']
 ---
 
 # MSA (Microservices Architecture)
