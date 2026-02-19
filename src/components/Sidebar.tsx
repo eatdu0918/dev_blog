@@ -15,17 +15,34 @@ export default function Sidebar() {
                     >
                         All Posts
                     </Link>
-                    {categories.map((category) => (
-                        <Link
-                            key={category}
-                            href={`/?category=${encodeURIComponent(category)}`}
-                            className="text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
-                        >
-                            {category}
-                        </Link>
-                    ))}
+                    {categories
+                        .filter(c => c !== 'Blog Architecture')
+                        .map((category) => (
+                            <Link
+                                key={category}
+                                href={`/?category=${encodeURIComponent(category)}`}
+                                className="text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
+                            >
+                                {category}
+                            </Link>
+                        ))}
                 </nav>
+
+                {categories.includes('Blog Architecture') && (
+                    <div className="mt-8">
+                        <h3 className="font-bold text-lg mb-4">Blog Architecture</h3>
+                        <nav className="flex flex-col space-y-2">
+                            <Link
+                                href={`/?category=${encodeURIComponent('Blog Architecture')}`}
+                                className="text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
+                            >
+                                Architecture Posts
+                            </Link>
+                        </nav>
+                    </div>
+                )}
+
             </div>
-        </aside>
+        </aside >
     );
 }
