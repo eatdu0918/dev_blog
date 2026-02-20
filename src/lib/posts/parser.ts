@@ -21,6 +21,16 @@ export async function parsePostContent(slug: string, fileContents: string): Prom
     const matterResult = matter(fileContents);
     const id = slug.replace(/\.md$/, '');
 
+    let rawContent = matterResult.content;
+    const sandpackBlocks: Array<{ filename: string, code: string }> = [];
+
+    // Extract sandpack blocks (supporting \r\n and \n)
+    rawContent = rawContent.replace(/::sandpack-start\((.*?)\)\r?\n([\s\S]*?)\r?\n::sandpack-end/g, (match, filename, code) => {
+        const index = sandpackBlocks.length;
+        sandpackBlocks.push({ filename: filename.trim(), code: code.trim() });
+        return `SANDPACK_BLOCK_${index}`;
+    });
+
     const processedContent = await unified()
         .use(remarkParse)
         .use(remarkGfm)
@@ -30,9 +40,17 @@ export async function parsePostContent(slug: string, fileContents: string): Prom
             keepBackground: true,
         })
         .use(rehypeStringify)
-        .process(matterResult.content);
+        .process(rawContent);
 
-    const contentHtml = processedContent.toString();
+    let contentHtml = processedContent.toString();
+
+    // Re-inject sandpack blocks
+    sandpackBlocks.forEach((block, index) => {
+        const encodedCode = Buffer.from(block.code, 'utf-8').toString('base64');
+        const placeholder = `<div class="sandpack-placeholder" data-filename="${block.filename}" data-code="${encodedCode}"></div>`;
+        // remark parses uppercase magic string in <p> tag
+        contentHtml = contentHtml.replace(`<p>SANDPACK_BLOCK_${index}</p>`, placeholder);
+    });
 
     return {
         id,
