@@ -25,3 +25,49 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
 }
+
+/* rehype-pretty-code styles */
+.prose pre {
+  padding: 0;
+  margin: 1.5rem 0;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+  background-color: transparent !important; /* Theme background takes precedence */
+}
+
+.prose pre > code {
+  display: grid;
+  padding: 1rem 0;
+  background-color: transparent !important;
+  border: none;
+}
+
+.prose pre code[data-theme*=" "],
+.prose pre code[data-theme*=" "] span {
+  color: var(--shiki-light);
+  background-color: var(--shiki-light-bg);
+}
+
+.dark .prose pre code[data-theme*=" "],
+.dark .prose pre code[data-theme*=" "] span {
+  color: var(--shiki-dark);
+  background-color: var(--shiki-dark-bg);
+}
+
+.prose code[data-line-numbers] {
+  counter-reset: line;
+}
+
+.prose code[data-line-numbers] > [data-line]::before {
+  counter-increment: line;
+  content: counter(line);
+  display: inline-block;
+  width: 1rem;
+  margin-right: 1.5rem;
+  text-align: right;
+  color: gray;
+}
+
+.prose [data-line] {
+  padding: 0 1rem;
+}

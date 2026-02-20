@@ -1,7 +1,10 @@
 import matter from 'gray-matter';
-import { remark } from 'remark';
-import html from 'remark-html';
+import { unified } from 'unified';
+import remarkParse from 'remark-parse';
 import remarkGfm from 'remark-gfm';
+import remarkRehype from 'remark-rehype';
+import rehypePrettyCode from 'rehype-pretty-code';
+import rehypeStringify from 'rehype-stringify';
 import { PostMetadata, PostContent } from './types';
 
 export function parsePostMetadata(slug: string, fileContents: string): PostMetadata {
@@ -18,9 +21,15 @@ export async function parsePostContent(slug: string, fileContents: string): Prom
     const matterResult = matter(fileContents);
     const id = slug.replace(/\.md$/, '');
 
-    const processedContent = await remark()
+    const processedContent = await unified()
+        .use(remarkParse)
         .use(remarkGfm)
-        .use(html)
+        .use(remarkRehype)
+        .use(rehypePrettyCode, {
+            theme: 'one-dark-pro',
+            keepBackground: true,
+        })
+        .use(rehypeStringify)
         .process(matterResult.content);
 
     const contentHtml = processedContent.toString();
