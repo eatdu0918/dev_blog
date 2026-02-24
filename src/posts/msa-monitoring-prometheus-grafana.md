@@ -1,7 +1,7 @@
 ---
 title: "MSA의 Prometheus와 Grafana로 모니터링 시스템 구축하기"
 description: "서비스가 너무 많아서 어디서 에러가 나는지 모르겠다고요? sparta-msa-final-project의 실시간 메트릭 수집 및 시각화 구축기를 공유합니다."
-date: "2026-02-23"
+date: "2026-02-24"
 tags: ["Architectural"]
 ---
 
@@ -27,8 +27,8 @@ graph LR
         S3[User Service]
     end
 
-    Prometheus[(Prometheus DB)]
-    Grafana[Grafana Dashboard]
+    Prometheus[("Prometheus DB")]
+    Grafana["Grafana Dashboard"]
 
     S1 -.->|Metrics 노출| Prometheus
     S2 -.->|Metrics 노출| Prometheus
