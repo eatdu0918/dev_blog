@@ -2,7 +2,7 @@
 title: "ELK Stack으로 분산 로그 추적하기"
 description: "각 서비스 서버마다 들어가서 'cat log' 하던 시대는 끝났습니다. sparta-msa-final-project의 ELK Stack 구축기를 통해 스마트하게 로그를 관리해 봅시다."
 date: "2026-02-24"
-tags: ["Architectural"]
+tags: ["Architecture"]
 ---
 
 # ELK Stack으로 분산 로그 추적하기

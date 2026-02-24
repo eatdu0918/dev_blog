@@ -2,7 +2,7 @@
 title: "MSA 보안의 관문: API Gateway와 JWT 중앙 집중형 인증 구축하기"
 description: "sparta-msa-final-project의 사례를 통해, 수많은 마이크로서비스의 보안을 한곳에서 효율적으로 관리하는 API Gateway 인증 전략을 알아봅니다."
 date: "2026-02-23"
-tags: ["MSA", "Gateway", "JWT", "Security", "Redis"]
+tags: ["Architectural"]
 ---
 
 # MSA 보안의 관문: API Gateway와 JWT 중앙 집중형 인증 구축하기

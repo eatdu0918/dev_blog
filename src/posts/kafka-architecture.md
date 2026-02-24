@@ -2,7 +2,7 @@
 title: "MSA 환경에서의 비동기 통신: Apache Kafka와 Saga 패턴 도입기"
 description: "e-commerce_msa 프로젝트에서 마이크로서비스 간의 데이터 동기화와 트랜잭션 관리를 위해 Apache Kafka와 Saga 패턴을 어떻게 도입했는지 정리합니다."
 date: "2026-02-21"
-tags: ["MSA", "Kafka", "Architecture", "Saga Pattern"]
+tags: ["Architecture"]
 ---
 
 # MSA 환경에서의 비동기 통신: Apache Kafka와 Saga 패턴 도입기

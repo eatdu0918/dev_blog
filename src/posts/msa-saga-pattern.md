@@ -2,7 +2,7 @@
 title: "MSA에서 분산 트랜잭션 해결하기: Saga 패턴 (Choreography)"
 description: "각 서비스의 독립성을 유지하면서 데이터 일관성을 보장하는 Saga 패턴에 대해 알아봅니다. 실제 이커머스 프로젝트 사례를 통해 Choreography 방식의 구현과 보상 트랜잭션을 살펴봅니다."
 date: "2026-02-23"
-tags: ["Architectural"]
+tags: ["Architecture"]
 ---
 
 # MSA에서 분산 트랜잭션 해결하기: Saga 패턴 (Choreography)

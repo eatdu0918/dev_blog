@@ -2,7 +2,7 @@
 title: "MSA에서 분산 트랜잭션 해결하기: Transactional Outbox 패턴"
 description: "sparta-msa-final-project의 실제 구현 사례를 통해 MSA 환경에서 데이터 정합성을 보장하는 Transactional Outbox 패턴을 깊게 파헤쳐 봅니다."
 date: "2026-02-23"
-tags: ["Architectural"]
+tags: ["Architecture"]
 ---
 
 # MSA에서 분산 트랜잭션 해결하기: Transactional Outbox 패턴

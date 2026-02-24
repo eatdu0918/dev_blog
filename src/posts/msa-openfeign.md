@@ -1,8 +1,8 @@
 ---
 title: "MSA 통신을 우아하게: OpenFeign으로 선언적 서비스 호출 구현하기"
 description: "RestTemplate은 이제 안녕! sparta-msa-final-project에서 복잡한 서비스 간 호출을 인터페이스 하나로 해결한 OpenFeign 활용법을 소개합니다."
-date: "2026-02-23"
-tags: ["MSA", "Spring Cloud", "OpenFeign", "HTTP Client", "Service Discovery"]
+date: "2026-02-24"
+tags: ["Architecture"]
 ---
 
 # MSA 통신을 우아하게: OpenFeign으로 선언적 서비스 호출 구현하기
