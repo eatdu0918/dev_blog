@@ -27,8 +27,8 @@ graph LR
         S3[User Service]
     end
 
-    Prometheus[("Prometheus DB")]
-    Grafana["Grafana Dashboard"]
+    Prometheus[(Prometheus DB)]
+    Grafana[Grafana Dashboard]
 
     S1 -.->|Metrics 노출| Prometheus
     S2 -.->|Metrics 노출| Prometheus
