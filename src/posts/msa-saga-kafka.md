@@ -2,7 +2,7 @@
 title: "MSA의 난제, 분산 트랜잭션 해결하기: Kafka와 Saga 패턴(보상 트랜잭션)"
 description: "sparta-msa-final-project에서 결제 실패 시 이미 차감된 재고를 어떻게 원상복구 할까요? 이벤트 기반의 Saga 패턴 실나리오를 공개합니다."
 date: "2026-02-23"
-tags: ["MSA", "Distributed Transaction", "Saga Pattern", "Kafka", "EDA"]
+tags: ["Architectural"]
 ---
 
 # MSA의 난제, 분산 트랜잭션 해결하기: Kafka와 Saga 패턴
