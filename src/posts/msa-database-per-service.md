@@ -2,7 +2,7 @@
 title: "MSA에서 Database per Service, 왜 나누고 어떻게 연결하나?"
 description: "sparta-msa-final-project의 7개 DB 격리 사례를 통해 MSA 데이터 설계의 핵심 원칙과 실무적인 트레이드오프를 살펴봅니다."
 date: "2026-02-24"
-tags: ["Architectural"]
+tags: ["Architecture"]
 ---
 
 # MSA에서 Database per Service, 왜 나누고 어떻게 연결하나?
