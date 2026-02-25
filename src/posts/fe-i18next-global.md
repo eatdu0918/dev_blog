@@ -1,7 +1,7 @@
 ---
 title: "글로벌 서비스의 지름길: i18next로 React 다국어 완벽 지원하기"
 description: "sparta-msa-final-project에서 선택한 다국어(i18n) 전략과 효율적인 번역 관리 팁을 공개합니다."
-date: "2026-02-23"
+date: "2026-02-25"
 tags: ["Frontend"]
 ---
 

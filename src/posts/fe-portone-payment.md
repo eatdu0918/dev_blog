@@ -1,8 +1,8 @@
 ---
 title: "현업 수준의 결제 환경 구축: PortOne SDK 연동 가이드"
 description: "이커머스의 꽃은 결제! sparta-msa-final-project에서 포트원 SDK를 활용해 실제 결제창을 띄우고 처리하는 전체 파이프라인을 공개합니다."
-date: "2026-02-23"
-tags: ["React", "PortOne", "Payment", "Frontend", "E-Commerce"]
+date: "2026-02-25"
+tags: ["Frontend"]
 ---
 
 # 현업 수준의 결제 환경 구축: PortOne SDK 연동 가이드
