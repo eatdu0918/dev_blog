@@ -17,7 +17,7 @@ tags: ["Architecture"]
 
 Docker Compose는 여러 개의 Docker 컨테이너를 하나의 서비스로 정의하고 관리할 수 있게 해주는 도구입니다. 복잡한 네트워크 설정, 볼륨 마운트, 환경 변수 관리를 `docker-compose.yml` 파일 하나로 끝낼 수 있습니다.
 
-### 🛠️ 우리 프로젝트의 구성 (총 17개 컨테이너)
+### 🛠️ 이  프로젝트의 구성 (총 17개 컨테이너)
 
 - **백엔드 서비스 (7개)**: Gateway, User, Product, Order, Discount, Payment, Cancel, Refund
 - **데이터베이스 (7개)**: MySQL (7개 독립 인스턴스)

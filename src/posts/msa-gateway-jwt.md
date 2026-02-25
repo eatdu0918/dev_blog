@@ -36,7 +36,7 @@ sequenceDiagram
 
 ## 🛠️ 핵심 구현: `JwtAuthenticationFilter`
 
-우리 프로젝트의 `gateway-service`에 구현된 인증 필터의 핵심 로직을 살펴보겠습니다.
+이  프로젝트의 `gateway-service`에 구현된 인증 필터의 핵심 로직을 살펴보겠습니다.
 
 ### 1. 토큰 검증 및 정보 추출
 Gateway는 `GlobalFilter` 또는 `AbstractGatewayFilterFactory`를 상속받아 모든 요청을 가로챕니다.
@@ -86,7 +86,7 @@ public class JwtAuthenticationFilter extends AbstractGatewayFilterFactory<JwtAut
 ```
 
 ### 2. Redis를 활용한 로그아웃(블랙리스트) 처리
-JWT는 무상태(Stateless)가 장점이지만, 강제로 만료시키기 어렵다는 단점이 있습니다. 우리는 사용자가 로그아웃하면 해당 토큰을 **Redis에 '블랙리스트'로 등록**하고, Gateway에서 이를 매번 확인함으로써 보안을 강화했습니다.
+JWT는 무상태(Stateless)가 장점이지만, 강제로 만료시키기 어렵다는 단점이 있습니다. 이 는 사용자가 로그아웃하면 해당 토큰을 **Redis에 '블랙리스트'로 등록**하고, Gateway에서 이를 매번 확인함으로써 보안을 강화했습니다.
 
 ```java
 private boolean isTokenBlacklisted(String token) {
