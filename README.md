@@ -1,6 +1,6 @@
 # Dev Blog
 
-🚀 **Live Demo:** [https://dev-blog-git-main-eatdu0918s-projects.vercel.app/](https://dev-blog-git-main-eatdu0918s-projects.vercel.app/)
+🚀 **Live Demo:** <a href="https://dev-blog-git-main-eatdu0918s-projects.vercel.app/" target="_blank">https://dev-blog-git-main-eatdu0918s-projects.vercel.app/</a>
 
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
