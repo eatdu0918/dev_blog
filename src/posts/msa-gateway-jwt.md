@@ -1,4 +1,5 @@
 ---
+published: true
 title: "MSA 환경의 인증 통제망 구조: API Gateway와 글로벌 필터 구현기"
 description: "분산된 수많은 마이크로서비스 환경에서 각 서비스마다 중복으로 들고 관리하던 인증 로직을 API Gateway 레벨 허브로 통합 개선한 과정을 남깁니다."
 date: "2026-02-23"

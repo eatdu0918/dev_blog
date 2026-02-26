@@ -3,6 +3,7 @@ export interface PostMetadata {
     date: string;
     title: string;
     categories?: string[];
+    published?: boolean;
     [key: string]: any;
 }
 

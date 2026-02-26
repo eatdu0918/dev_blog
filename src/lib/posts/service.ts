@@ -9,10 +9,15 @@ export function getAllPosts(category?: string): PostMetadata[] {
         return parsePostMetadata(slug, fileContents);
     });
 
+    // Filter by published status (show all in development)
+    const publishedPosts = process.env.NODE_ENV === 'development'
+        ? allPostsData
+        : allPostsData.filter((post) => post.published === true);
+
     // Filter by category if provided
     const filteredPosts = category
-        ? allPostsData.filter((post) => post.categories?.includes(category))
-        : allPostsData;
+        ? publishedPosts.filter((post) => post.categories?.includes(category))
+        : publishedPosts;
 
     // Sort posts by date
     return filteredPosts.sort((a, b) => {
@@ -34,11 +39,11 @@ export function getAllCategories(): string[] {
 }
 
 export function getAllPostIds() {
-    const slugs = getPostSlugs();
-    return slugs.map((fileName) => {
+    const posts = getAllPosts();
+    return posts.map((post) => {
         return {
             params: {
-                slug: fileName.replace(/\.md$/, ''),
+                slug: post.id,
             },
         };
     });

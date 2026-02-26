@@ -1,4 +1,5 @@
 ---
+published: true
 title: "Java와 JavaScript의 오버라이드(Override) 개념 충돌과 깨달음"
 description: "정적 타입 언어인 Java에 익숙하던 상태에서 동적 타입 언어인 JavaScript의 오버라이드 동작 방식을 마주하며 겪은 혼란을 정리합니다."
 date: "2026-02-22"

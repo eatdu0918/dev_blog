@@ -1,4 +1,5 @@
 ---
+published: true
 title: "안전하게 이벤트 발송하기: Transactional Outbox 패턴 적용기"
 description: "데이터베이스 커밋과 아웃바운드 메시지 발행 사이의 정합성 유실(Dual Write) 장애를 차단한 경험을 회고합니다."
 date: "2026-02-23"

@@ -1,4 +1,5 @@
 ---
+published: true
 title: "상태 관리 패러다임의 변화: useEffect에서 TanStack Query로"
 description: "서버 데이터를 받아오기 위해 사용하던 useEffect 기반 패턴을 TanStack Query로 리팩토링하며 얻은 생산성 향상 경험을 공유합니다."
 date: "2026-02-23"

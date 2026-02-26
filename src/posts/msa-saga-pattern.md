@@ -1,4 +1,5 @@
 ---
+published: true
 title: "이벤트 기반 데이터 정합성 맞추기: Choreography 기반 Saga 구조 경험"
 description: "각 서비스의 자율성에 의존하여 롤백 플로우를 이어 나가는 이벤트 소싱 구조의 장단점을 파악한 과정을 공유합니다."
 date: "2026-02-23"

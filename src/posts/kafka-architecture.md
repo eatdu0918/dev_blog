@@ -1,4 +1,5 @@
 ---
+published: true
 title: "MSA 환경에서의 비동기 통신: Apache Kafka와 Saga 패턴 도입기"
 description: "도메인이 분리된 마이크로서비스 간의 데이터 정합성을 유지하기 위해 Kafka와 Saga 패턴을 아키텍처에 적용하며 겪은 한계와 해결 과정을 회고합니다."
 date: "2026-02-21"

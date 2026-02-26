@@ -1,4 +1,5 @@
 ---
+published: true
 title: "React 상태 관리 리팩토링: Redux에서 Zustand로"
 description: "과도한 보일러플레이트 코드로 유지보수 효율이 떨어졌던 전역 상태 관리를 Zustand를 통해 단순화한 경험을 기록합니다."
 date: "2026-02-25"

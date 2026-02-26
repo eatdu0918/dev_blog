@@ -1,4 +1,5 @@
 ---
+published: true
 title: '객체 지향 프로그래밍(OOP) 도입과 리팩토링 경험'
 date: '2026-02-18'
 categories: ['Programming', 'CS']

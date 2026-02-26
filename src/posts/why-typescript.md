@@ -1,4 +1,5 @@
 ---
+published: true
 title: "JavaScript 생태계에서 TypeScript로 전향해야 했던 이유"
 description: "동적 언어의 자유도가 런타임 재앙으로 변하는 한계를 마주하고, 정적 타입 컴파일러의 안전성을 도입한 체감 효과를 회고합니다."
 date: "2026-02-20"

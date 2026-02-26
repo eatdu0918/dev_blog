@@ -1,4 +1,5 @@
 ---
+published: true
 title: "RESTful API란 무엇인가? 개념과 실무 설계 규칙"
 description: "서버와 클라이언트 간의 통신 표준인 REST 아키텍처의 철학과, 협업을 위한 API 설계 규칙을 정리합니다."
 date: "2026-02-25"

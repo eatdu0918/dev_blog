@@ -1,4 +1,5 @@
 ---
+published: true
 title: "Prometheus와 Grafana를 활용한 MSA 모니터링 시스템 전환기"
 description: "로컬 환경을 넘어선 서버 모니터링의 부재로 겪은 트러블을 해소하기 위해 실시간 메트릭 수집 생태계를 구축한 경험을 공유합니다."
 date: "2026-02-24"

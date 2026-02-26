@@ -1,4 +1,5 @@
 ---
+published: true
 title: "MSA 환경에서 마주한 Database per Service와 JOIN의 딜레마"
 description: "마이크로서비스 도입 후 데이터베이스를 분리하면서 직면한 데이터 참조 문제와 이를 해결하기 위한 아키텍처 훈련 과정을 정리합니다."
 date: "2026-02-24"

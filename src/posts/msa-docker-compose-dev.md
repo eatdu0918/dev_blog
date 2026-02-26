@@ -1,4 +1,5 @@
 ---
+published: true
 title: "MSA 로컬 인프라 구동의 벽: Docker Compose 도입기"
 description: "로컬 환경에서 다수의 마이크로서비스와 인프라들을 수동으로 구동하며 겪은 혼란을 Docker Compose를 통해 통제한 경험을 회고합니다."
 date: "2026-02-24"

@@ -1,4 +1,5 @@
 ---
+published: true
 title: '클린 코드(Clean Code): 이해하기 좋은 코드를 향한 고민'
 date: '2026-02-22'
 categories: ['Programming']

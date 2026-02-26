@@ -1,4 +1,5 @@
 ---
+published: true
 title: "MSA 동기 통신 개선기: RestTemplate에서 OpenFeign으로"
 description: "서비스 간 내부 API 호출 과정에서 발생한 중복된 HTTP 통신 보일러플레이트 코드를 OpenFeign을 통해 선언적으로 걷어낸 과정을 회고합니다."
 date: "2026-02-24"

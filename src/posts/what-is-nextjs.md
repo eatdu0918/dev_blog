@@ -1,4 +1,5 @@
 ---
+published: true
 title: "React를 넘어 Next.js를 도입해야 했던 이유"
 description: "React의 CSR이 가진 렌더링 한계를 마주하고 파악한 Next.js의 SSR과 App Router 체계의 필수 불가결한 장점을 정리합니다."
 date: "2026-02-21"

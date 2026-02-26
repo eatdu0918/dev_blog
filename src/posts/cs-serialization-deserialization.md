@@ -1,4 +1,5 @@
 ---
+published: true
 title: "직렬화(Serialization)와 역직렬화(Deserialization) 실무 적용기"
 description: "로컬 메모리의 객체를 외부와 통신하기 위해 직렬화 과정을 접목하고 겪었던 이슈들을 정리합니다."
 date: "2026-02-25"

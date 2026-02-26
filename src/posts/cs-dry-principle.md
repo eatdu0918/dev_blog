@@ -1,4 +1,5 @@
 ---
+published: true
 title: "DRY 원칙: 코드 중복을 피하기 (Don't Repeat Yourself)"
 description: "DRY 원칙의 중요성과, 무리한 추상화로 인해 겪었던 부작용에 대한 실무 경험을 정리합니다."
 date: "2026-02-26"

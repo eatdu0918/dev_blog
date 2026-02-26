@@ -1,4 +1,5 @@
 ---
+published: true
 title: "Axios 인터셉터 도입기: JWT Silent Refresh 구현 경험"
 description: "토큰 만료로 인한 사용자 불편을 해결하기 위해 Axios 인터셉터와 Silent Refresh를 알게 되고 적용한 과정을 기록합니다."
 date: "2026-02-25"

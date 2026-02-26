@@ -1,4 +1,5 @@
 ---
+published: true
 title: "React 폼 관리 리팩토링: useState에서 React Hook Form과 Zod로"
 description: "복잡한 폼 상태와 유효성 검사 로직으로 인해 발생한 렌더링 지연 문제를 React Hook Form과 Zod를 통해 개선한 경험을 공유합니다."
 date: "2026-02-25"

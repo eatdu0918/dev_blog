@@ -1,4 +1,5 @@
 ---
+published: true
 title: "패키지 매니저 삼국지: 무거운 모듈 의존성 지옥에서 pnpm 전환기"
 description: "방대해지는 node_modules 용량과 모노레포 구축 시 발생한 유령 의존성 트러블을 해결하기 위해 pnpm으로 이주한 경험을 남깁니다."
 date: "2026-02-21"

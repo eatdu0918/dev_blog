@@ -1,4 +1,5 @@
 ---
+published: true
 title: "모듈 캡슐화(Module Encapsulation): 얽힌 코드 풀며 느낀 점"
 description: "소프트웨어의 복잡성을 제어하기 위해 모듈화와 캡슐화를 실무에 적용해 보며 깨달은 점들을 정리합니다."
 date: "2026-02-26"
