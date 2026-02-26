@@ -1,110 +1,50 @@
 ---
-title: "MSA 보안의 관문: API Gateway와 JWT 중앙 집중형 인증 구축하기"
-description: "sparta-msa-final-project의 사례를 통해, 수많은 마이크로서비스의 보안을 한곳에서 효율적으로 관리하는 API Gateway 인증 전략을 알아봅니다."
+title: "MSA 환경의 인증 통제망 구조: API Gateway와 글로벌 필터 구현기"
+description: "분산된 수많은 마이크로서비스 환경에서 각 서비스마다 중복으로 들고 관리하던 인증 로직을 API Gateway 레벨 허브로 통합 개선한 과정을 남깁니다."
 date: "2026-02-23"
-tags: ["Architectural"]
+tags: ["Architecture", "Security"]
 ---
 
-# MSA 보안의 관문: API Gateway와 JWT 중앙 집중형 인증 구축하기
+# MSA 환경의 인증 통제망 구조: API Gateway와 글로벌 필터 구현기
 
-마이크로서비스 아키텍처(MSA)에서는 수십 개의 서비스가 흩어져 있습니다. 만약 각 서비스마다 로그인 여부를 확인하고 권한을 체크하는 로직을 넣는다면 어떨까요? 코드 중복은 물론이고, 인증 방식이 바뀔 때마다 모든 서비스를 수정해야 하는 재앙이 발생할 것입니다.
+마이크로서비스 아키텍처 지향형의 프로젝트 백엔드 통신망을 구축할 때, 유입 유저의 검문(인증/인가) 처리를 어떤 구조망으로 설계해야 할지 고민이 다수 쌓였습니다. 단일 구조로 이루어진 모놀리식 서버 환경에서는 보안 필터 한 방으로 제어하면 끝났지만, 여러 대의 서버 덩어리로 파편화되어 흩어져 있는 MSA 체제는 전혀 달랐습니다.
 
-[`sparta-msa-final-project`](https://github.com/eatdu0918/sparta-msa-final-project)에서는 이를 해결하기 위해 **API Gateway에서 모든 인증을 중앙 집중적으로 처리**하는 전략을 선택했습니다.
-
----
-
-## 🏗️ 인증 아키텍처: 누가 들어올 수 있는가?
-
-Gateway는 클라이언트의 모든 요청을 가장 먼저 받는 '문지기' 역할을 합니다. 여기서 유효한 사용자인지 검증한 뒤, 인증 정보(사용자 ID, 권한 등)를 헤더에 담아 내부 서비스로 전달합니다.
-
-```mermaid
-sequenceDiagram
-    participant User as 클라이언트
-    participant GW as API Gateway
-    participant Redis as Redis (Blacklist)
-    participant Service as 내부 서비스 (주문/상품 등)
-
-    User->>GW: 요청 (Authorization: Bearer JWT)
-    GW->>Redis: 토큰 유효성 및 블랙리스트 확인
-    Redis-->>GW: OK
-    GW->>GW: JWT 파싱 및 클레임 추출
-    GW->>Service: 요청 전달 (X-User-Id: 123 추가)
-    Service-->>User: 결과 응답
-```
+단순했던 초기 중복 설계의 한계점부터, 라우팅의 핵심 거점인 **API Gateway**를 거쳐 중앙 집중형 인증 검증망 체계로 리팩토링한 과정을 회고합니다.
 
 ---
 
-## 🛠️ 핵심 구현: `JwtAuthenticationFilter`
+## 🚫 초기 개발 환경의 실패 설계: 모든 서버망에 복제된 인증 로직
 
-이  프로젝트의 `gateway-service`에 구현된 인증 필터의 핵심 로직을 살펴보겠습니다.
+과거 첫 개발 사이클 설계 당시, 저는 개발 진행 속도만을 위해 회원 서비스, 주문 서비스, 결제 서비스 모두에 스프링 시큐리티 의존성을 추가해 놓고 JWT 토큰의 해석 로직 코드를 수동으로 전부 복사해 넣었습니다.
 
-### 1. 토큰 검증 및 정보 추출
-Gateway는 `GlobalFilter` 또는 `AbstractGatewayFilterFactory`를 상속받아 모든 요청을 가로챕니다.
-
-```java
-@Component
-@Slf4j
-public class JwtAuthenticationFilter extends AbstractGatewayFilterFactory<JwtAuthenticationFilter.Config> {
-    
-    // ... 생략 ...
-
-    @Override
-    public GatewayFilter apply(Config config) {
-        return (exchange, chain) -> {
-            ServerHttpRequest request = exchange.getRequest();
-
-            // 1. Authorization 헤더 확인
-            String authHeader = request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
-            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-                return onError(exchange, "No Authorization Header", HttpStatus.UNAUTHORIZED);
-            }
-
-            String token = authHeader.substring(7);
-
-            // 2. JWT 유효성 검증 및 블랙리스트 확인 (Redis 연동)
-            if (isTokenBlacklisted(token)) {
-                return onError(exchange, "Token is loged out", HttpStatus.UNAUTHORIZED);
-            }
-
-            try {
-                // 3. JWT 클레임 파싱
-                Claims claims = parseJwt(token);
-                
-                // 4. 내부 서비스에서 사용할 수 있도록 헤더 변조 (Mutate)
-                ServerHttpRequest mutatedRequest = exchange.getRequest().mutate()
-                        .header("X-User-Id", claims.get("userId").toString())
-                        .header("X-User-Role", claims.get("role").toString())
-                        .build();
-
-                return chain.filter(exchange.mutate().request(mutatedRequest).build());
-            } catch (Exception e) {
-                return onError(exchange, "Invalid Token", HttpStatus.UNAUTHORIZED);
-            }
-        };
-    }
-}
-```
-
-### 2. Redis를 활용한 로그아웃(블랙리스트) 처리
-JWT는 무상태(Stateless)가 장점이지만, 강제로 만료시키기 어렵다는 단점이 있습니다. 이 는 사용자가 로그아웃하면 해당 토큰을 **Redis에 '블랙리스트'로 등록**하고, Gateway에서 이를 매번 확인함으로써 보안을 강화했습니다.
-
-```java
-private boolean isTokenBlacklisted(String token) {
-    // Redis에 해당 토큰 키가 존재하는지 확인
-    return Boolean.TRUE.equals(redisTemplate.hasKey("blacklist:" + token));
-}
-```
+클라이언트의 요청이 이뤄지면, 전혀 관련 없는 서로 다른 마이크로서비스 인스턴스들이 각자 동일한 보안 파싱 라이브러리를 기동하며 헤더에서 토큰을 추출해 검증에 나섰습니다.
+하지만 이 방식은 머지않아 큰 유지보수 지연 부메랑으로 돌아왔습니다. "비밀 키(Secret Key)를 교체해야 한다"거나, "토큰 추출 방식을 헤더 전송에서 웹 쿠키 주입 방식으로 바꿔보자"는 정책 단의 기능 수정 요건이 프로젝트에 닥쳤을 때, 백엔드를 구성하는 모든 서버 코드를 전부 뜯어고치고 재배포 릴리스를 수행해야 하는 개발 비효율성의 극치를 직접 겪게 되었습니다.
 
 ---
 
-## 💡 이 방식의 장점
+## 🛡️ 개선: API Gateway로 문지기 역할 위임 
 
-1.  **관심사의 분리**: 내부 서비스(Order, Product 등)는 비즈니스 로직에만 집중할 수 있습니다. 이미 Gateway를 통과했다면 인증된 요청이라고 믿고, 헤더의 `X-User-Id`를 사용하기만 하면 됩니다.
-2.  **일관된 보안 정책**: 인증 로직을 수정하고 싶을 때 `gateway-service` 하나만 고치면 전체 시스템에 적용됩니다.
-3.  **성능과 보안의 균형**: Redis를 사용해 블랙리스트 확인 속도를 최적화하면서도, JWT의 장점인 빠른 검증을 활용합니다.
+비효율적인 '반복 유지보수 작업망'을 줄이기 위해, 모든 사용자 트래픽이 유일하게 백엔드 군단으로 진입 통과해야만 하는 최전방 진입 통제선, **API Gateway** 시스템 계층 모듈에 통합 인증 구조 확인 역할망의 책임을 일임하는 결단을 내렸습니다. 
 
-## 마무리
+그 후방으로 포진되어 숨어 있는 세부 마이크로서비스 컴포넌트들은 시큐리티 검문 방어 코드를 내부 소스망에서 완전히 배제한 신뢰 존 코드 상태의 망으로 유연 동작되게 내버려두고, 단일 외부 인입점인 최전방 API Gateway 에만 글로벌 커스텀 스크립팅 필터(`JwtAuthenticationFilter`)를 강제 배정 적용시켰습니다.
 
-MSA를 구축할 때 보안의 시작은 **"Gateway를 어떻게 설계하느냐"**에 달려 있습니다. 이번 프로젝트에서 구축한 통합 인증 시스템은 서비스가 늘어나도 확장하기 쉬운 견고한 기반이 되었습니다.
+### 적용 설계 아키텍처 데이터 유입 처리 흐름
+1. 클라이언트가 API Gateway로 자원 호출 요청 및 식별 토큰 헤더값을 송출.
+2. 유일한 문지기인 통제 Gateway망에서 해당 전달 토큰 문자열의 위변조 유무를 검사 확인하고 파싱을 돌려 유저 고유 식별자 데이터를 도출.
+3. **Gateway 스크립트는 본인이 직접 파싱 승인한 고유 유저 식별자 문자열 데이터를, 새로운 자체 내부망 HTTP 헤더(`X-User-Id` 등)에 강제로 안전하게 쑤셔 넣고 목적지 서버로 릴레이 우회 전송 처리(Request Mutate Routing).**
+4. 최종 관할지인 후방의 수신 목적지 마이크로서비스 시스템은 Gateway가 알아서 다 걸러 내리고 보내준 헤더 통신값 내 포함 식별 정보만을 절대 신뢰 조건으로 가정한 후 즉각 비즈니스 컴포넌트 처리를 수행.
 
-다음 포스팅에서는 이렇게 인증된 주문 요청이 여러 서비스로 전파될 때, 데이터 정합성을 어떻게 유지하는지(Kafka & Saga 패턴)에 대해 알아보겠습니다!
+---
+
+## 🛠️ 게이트웨이 필터 내 조기 트래픽 차단 이점
+
+해당 중앙 통제망 방식의 아키텍처 필터를 도입 조율하면서 보안 블랙리스트(로그아웃 무효 처리 토큰) 정책 연동 제어 또한 한층 유연성을 더하게 보강 적용되었습니다.
+사용자의 인증 조회 요청이 통신망으로 흘러들어올 때마다 불필요하게 맨 후방 코어 서버가 귀중한 트래픽 감당을 무시한 채로 DB를 재차 열람하는 리소스 병목 장애 현상을 겪을 필요성이 파기되었습니다. 부적격 토큰 혹은 조작 유입 값은 진작 서버 에러 메시지 데이터(`HttpStatus.UNAUTHORIZED`)로 판단되어 즉결 퇴출되어 원클라이언트에게 돌아갔습니다. 덕분에 하위 내면망 시스템 환경은 오염되지 않는 깨끗한 로직 처리 트래픽 자원만 절감 수준으로 통제 유지가 되었습니다.
+
+---
+
+## 💡 회고를 마치며
+
+API Gateway 인프라에서 단독으로 권한 통제 비즈니스 로직 책임을 100% 흡수해내고 차단하는 설계 도식 패턴을 고민하여 적용해 본 체험 후기로써, 현대 백엔드의 MSA 환경 스키마 설계에 있어 **횡단 관심사 공통 로직 모듈 컴포넌트 분리(Cross-Cutting Concerns)**에 대한 시스템 인프라 아키텍팅 시야 감각과 지식을 폭넓게 증진하게 된 좋은 결과였습니다. 
+
+로직을 납품 받는 형태인 최후방 비즈니스 도메인 서비스 측면의 엔지니어는 이와 같이 "일선 게이트 시스템을 이미 통과 통제하여 걸러지고 내 영역 궤도에 진입한 접근 요청 건이라면, 분명 조작되지 않은 무결점 보안 인증 처리로 안전한 사용자임이 100퍼센트 자명하다"라는 시스템적 대전제를 깔아놓고 오직 순수 자신 도메인 코어 핵심 기능 작성 로직 개발 파이프에만 효율적으로 리소스를 전담해 몰입할 수 있도록 생태계 규범과 안정 영역 가이드를 만들어 내는 엔지니어링 설계의 중요성을 가장 뜻깊게 복기하게 된 사례였습니다.

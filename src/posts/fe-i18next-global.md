@@ -1,47 +1,23 @@
 ---
-title: "글로벌 서비스의 지름길: i18next로 React 다국어 완벽 지원하기"
-description: "sparta-msa-final-project에서 선택한 다국어(i18n) 전략과 효율적인 번역 관리 팁을 공개합니다."
+title: "하드코딩된 텍스트 걷어내기: i18next를 활용한 다국어 처리 경험"
+description: "React 컴포넌트에 직접 텍스트를 작성하다 다국어 지원 요구사항을 맞닥뜨리며, i18next 라이브러리로 구조를 개선한 과정을 기록합니다."
 date: "2026-02-25"
-tags: ["Frontend"]
+tags: ["Frontend", "React"]
 ---
 
-# 글로벌 서비스의 지름길: i18next로 React 다국어 완벽 지원하기
+# 하드코딩된 텍스트 걷어내기: i18next를 활용한 다국어 처리 경험
 
-스타트업이나 글로벌 서비스를 지향하는 프로젝트라면 반드시 고려해야 할 것이 있습니다. 바로 **다국어(i18n)** 지원입니다. 텍스트를 컴포넌트에 하드코딩해 두었다면 나중에 영어나 일본어를 추가할 때 모든 파일을 뒤져야 하는 수고가 따릅니다.
+프로젝트 초기에는 속도를 내기 위해 컴포넌트 트리에 "로그인", "상품 검색" 같은 정적 텍스트를 직접 하드코딩하며 개발했습니다. 
 
-[`sparta-msa-final-project`](https://github.com/eatdu0918/sparta-msa-final-project)에서는 업계 표준 라이브러리인 **i18next**를 활용해 유지보수가 쉬운 글로벌 서비스 기반을 닦았습니다.
+그러다 추후 서비스에 글로벌 다국어 지원 요건이 배정되었을 때, 수십 개의 컴포넌트를 일일이 열어 텍스트를 찾고 언어 코드를 판별하는 조건문을 덕지덕지 달아야 하는 절망적인 상황을 마주하게 되었습니다. 이를 계기로 근본적인 다국어 처리 구조의 필요성을 통감하고 **i18next**를 도입하여 전면 리팩토링했던 과정을 정리합니다.
 
 ---
 
-## 🛠️ 설정하기: `src/i18n.ts`
+## 🛠️ 번역 텍스트의 데이터화 및 분리
 
-먼저 라이브러리를 초기화하고, 언어별 번역 파일(JSON)을 연결해 주어야 합니다.
+가장 먼저 한 작업은 UI 컴포넌트 내부에 결합되어 있던 텍스트 리소스를 모두 추출하여 독립된 JSON 데이터로 구성하는 것이었습니다.
 
-```typescript
-import i18n from 'i18next';
-import { initReactI18next } from 'react-i18next';
-import LanguageDetector from 'i18next-browser-languagedetector';
-
-// 번역 데이터 로딩 (보통 별도의 JSON 파일로 관리)
-import ko from './locales/ko.json';
-import en from './locales/en.json';
-
-i18n
-  .use(LanguageDetector) // 브라우저 언어를 자동으로 감지
-  .use(initReactI18next)
-  .init({
-    resources: {
-      ko: { translation: ko },
-      en: { translation: en },
-    },
-    fallbackLng: 'ko', // 인식 실패 시 기본 언어
-    interpolation: { escapeValue: false }
-  });
-
-export default i18n;
-```
-
-### 번역 파일 구조 (locales/ko.json)
+### 번역 파일 구조 (`locales/ko.json`)
 ```json
 {
   "header": {
@@ -54,11 +30,13 @@ export default i18n;
 }
 ```
 
+이렇게 데이터를 별도의 JSON으로 분리하고 나니 번역이 필요한 텍스트 목록의 관리가 용이해졌고, 동료나 번역가와의 협업 경계가 뚜렷해졌습니다.
+
 ---
 
-## 🏗️ 컴포넌트에서 사용하기: `useTranslation`
+## 🏗️ 컴포넌트에서의 동적 렌더링
 
-이제 더 이상 컴포넌트에 "로그인"이라고 적지 않습니다. 대신 키(Key) 값을 사용합니다.
+`i18next` 패키지와 `react-i18next`를 초기화 세팅한 후, 컴포넌트 단에서는 직접적인 문자열 대신 **다국어 키(Key)** 값으로 치환하여 렌더링하도록 변경했습니다.
 
 ```tsx
 import { useTranslation } from 'react-i18next';
@@ -67,38 +45,36 @@ function Header() {
   const { t, i18n } = useTranslation();
 
   const changeLanguage = (lng: string) => {
-    i18n.changeLanguage(lng); // 클릭 한 번으로 서비스 전체 언어 변경!
+    i18n.changeLanguage(lng); 
   };
 
   return (
     <header>
-      <h1>{t('header.search')}</h1>
-      <button onClick={() => changeLanguage('en')}>English</button>
-      <button onClick={() => changeLanguage('ko')}>한국어</button>
+      {/* "상품 검색" 이라는 하드코딩 텍스트 제거 */}
+      <h1>{t('header.search')}</h1> 
     </header>
   );
 }
 ```
 
----
-
-## ✨ i18next의 숨은 강점: 동적 인자(Interpolation)
-
-단순히 글자만 바꾸는 게 아닙니다. 변하는 값(상품명, 가격 등)을 번역문에 자연스럽게 녹일 수 있습니다.
-
-- **JSON**: `"total": "총 {{count}}개의 상품이 있습니다."`
-- **React**: `t('total', { count: cartItems.length })` -> "총 5개의 상품이 있습니다."
+이제 `i18n.changeLanguage('en')`이 호출되면 전역 설정이 업데이트되며 접속된 모든 레이아웃의 텍스트 원천이 영어 데이터로 일괄 치환되었습니다.
 
 ---
 
-## 💡 실천 포인트: 번역 관리 팁
+## ✨ 동적 인자(Interpolation) 관리
 
-1.  **키 명명 규칙**: `도메인.기능.위치` (예: `order.form.button_submit`) 등으로 명확히 정하면 중복을 피할 수 있습니다.
-2.  **번역 파일 분리**: 앱이 커지면 하나의 JSON이 너무 비대해집니다. 도메인별로 파일을 쪼개고 `ns`(Namespace) 기능을 활용하세요.
-3.  **검수 프로세스**: 기획자나 번역가와 소통할 때, JSON 파일을 공유하기보다는 구글 스프레드시트를 이용해 관리하고 JSON으로 변환하는 자동화 스크립트를 추천드립니다.
+단순 번역을 넘어서 가장 고민했던 부분은 변수가 섞인 문장이었습니다. 예를 들어 "총 3개의 상품이 있습니다."라는 한국어 어순이 영어권 대응 시 변수의 위치가 달라지는 점이 까다로웠습니다. 결과적으로 i18next에서 지원하는 보간(Interpolation) 기능이 이 숙제를 풀어주었습니다.
 
-## 마무리
+- **JSON (한국어)**: `"total": "총 {{count}}개의 상품이 있습니다."`
+- **JSON (영어)**: `"total": "There are {{count}} total items."`
+- **코드부**: `t('total', { count: cartItems.length })`
 
-다국어 지원은 단순히 '언어를 바꾸는 것' 이상의 가치가 있습니다. 코드에서 텍스트를 분리함으로써 개발자와 기획자가 더 효율적으로 협업할 수 있는 구조를 만들어줍니다.
+동적 인자를 객체 형태로 주입하기 때문에 각 언어권 고유의 어순에 맞춰 유연하게 위치를 변경할 수 있었습니다.
 
-다음 포스팅에서는 이커머스의 정점! **PortOne SDK**를 활용한 실제 결제 연동 가이드로 돌아오겠습니다.
+---
+
+## 💡 회고
+
+다국어 지원은 단순히 '두 번째 언어를 띄워주는 기능'에서 그치지 않았습니다. 뷰(View) 영역을 구성하는 코드에서 '글자 자산(Asset)'을 별도의 데이터 레이어로 완벽히 분리해 내는 아키텍처 재설계 과정이었습니다.
+
+초기 단계에서 하드코딩의 타협에 빠졌다가 결국 나중에 되갚아야 할 큰 기술 부채가 된 과정을 겪으면서, 이후로는 새로운 컴포넌트를 설계할 때 뷰에 종속된 텍스트 자산을 처음부터 빼내어 정의하는 습관을 들이게 되었습니다.

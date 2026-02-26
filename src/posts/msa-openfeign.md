@@ -1,90 +1,93 @@
 ---
-title: "MSA 통신을 우아하게: OpenFeign으로 선언적 서비스 호출 구현하기"
-description: "RestTemplate은 이제 안녕! sparta-msa-final-project에서 복잡한 서비스 간 호출을 인터페이스 하나로 해결한 OpenFeign 활용법을 소개합니다."
+title: "MSA 동기 통신 개선기: RestTemplate에서 OpenFeign으로"
+description: "서비스 간 내부 API 호출 과정에서 발생한 중복된 HTTP 통신 보일러플레이트 코드를 OpenFeign을 통해 선언적으로 걷어낸 과정을 회고합니다."
 date: "2026-02-24"
-tags: ["Architecture"]
+tags: ["Architecture", "Spring"]
 ---
 
-# MSA 통신을 우아하게: OpenFeign으로 선언적 서비스 호출 구현하기
+# MSA 동기 통신 개선기: RestTemplate에서 OpenFeign으로
 
-마이크로서비스 아키텍처(MSA)에서 각 서비스는 서로에게 필요한 데이터를 묻고 답합니다. 예전에는 `RestTemplate`이나 `WebClient`를 써서 URI를 만들고, 헤더를 세팅하고, 응답을 파싱하는 복잡한 코드를 직접 짰습니다. 하지만 서비스가 늘어날수록 이 코드는 유지보수의 짐이 됩니다.
+마이크로서비스 아키텍처(MSA)에서는 각 모듈 서버 단위가 물리적으로 완벽히 단절되어 있기 때문에, 필요한 외부 파트 서버 도메인 객체 데이터를 획득하려면 필수적으로 네트워크 기반 HTTP 요청 통신을 교차로 거쳐야만 합니다.
 
-[`sparta-msa-final-project`](https://github.com/eatdu0918/sparta-msa-final-project)에서는 이 문제를 **Spring Cloud OpenFeign**을 통해 선언적으로 해결했습니다.
+초기 토이 시스템 통신 연계를 구축할 당시 이 통신 매개 역할을 위해 `RestTemplate` 도구 클래스 인스턴스 환경을 활용했습니다. 하지만 곧 각 서버마다 핑퐁치듯 날리는 통신 파이프라인 관련 기초 세팅 코드의 중복 반복성이 극에 달했고, 이를 구조 레벨적으로 단번에 타파하기 위해 **Spring Cloud OpenFeign** 전역 라이브러리 매개를 새롭게 도입 적용하여 파편화된 HTTP 클라이언트 로직을 우아하게 추상화했던 기능 개선기를 기록에 남겨봅니다.
 
 ---
 
-## 🧐 OpenFeign이란? (인터페이스만 만드세요)
+## 🚫 RestTemplate이 초래한 무거운 보일러플레이트 부채
 
-OpenFeign은 **인터페이스에 어노테이션만 붙이면 구현체는 라이브러리가 자동으로 만들어주는** HTTP 클라이언트 도구입니다. 개발자는 마치 자기 서비스 안에 있는 메소드를 호출하듯이 타 서비스를 호출할 수 있게 됩니다.
-
-### 🏗️ 실전 코드 분석: 주문 서비스가 상품 정보를 조회할 때
-
-'주문 서비스'가 '상품 서비스'에 재고나 가격 정보를 물어봐야 하는 상황입니다.
+초기 기동 단계에서 '주문 처리 서비스' 모듈이 '상품 관리 서비스' 측에 재고량 정보를 HTTP GET으로 물어보는 연결 로직은 다음과 같이 난해하고 장황했습니다.
 
 ```java
-// ProductServiceClient.java (Order Service 내부에 위치)
-@FeignClient(name = "product-service", url = "${PRODUCT_SERVICE_URL:http://product-service:8081}")
+// 과거 RestTemplate을 단독 활용한 지루하고 무거운 작성 방식
+public ProductResponse getProductFromOtherService(Long productId) {
+    // 하드코딩이나 설정 주입을 통한 엔드포인트 URL 스트링 수동 조합
+    String url = "http://product-service:8081/api/v1/products/" + productId;
+    
+    // 매 요청마다 일일이 헤더 객체를 선언하여 암호화 토큰 수동 셋업 복사 붙이기
+    HttpHeaders headers = new HttpHeaders();
+    headers.set("Authorization", "Bearer " + jwtToken); 
+    HttpEntity<String> entity = new HttpEntity<>(headers);
+    
+    // 타 서버 수동 동기 통신 수행 및 리턴값 클래스 강제 형변환 예외 처리 파이프 강제 부여
+    ResponseEntity<ProductResponse> response = restTemplate.exchange(
+        url, HttpMethod.GET, entity, ProductResponse.class
+    );
+    
+    return response.getBody();
+}
+```
+위와 같이 단순 데이터 API 파이프를 하나 타 서버망으로 찌를 때마다 URL 리소스 문자열 조합 세팅, 유저 인가 토큰 헤더 복사 탑재, 통신 예외 응답 캐치 제어, JSON 응답부 DTO 객체 파싱 전환까지 판박이처럼 생겨먹은 똑같은 패턴의 통신 바디 코드를 서비스 군단 내내 수십 줄씩 강제 복붙하며 낭비해야만 했습니다.
+
+---
+
+## ✨ 해결 개선: OpenFeign 도입 - 인터페이스로 HTTP 클라이언트를 추상화하다
+
+위의 피로도와 스파게티성 보일러플레이트를 해소하기 위해 도입 결정한 OpenFeign 메커니즘은 꽤나 충격적이었습니다. **단순히 텅 빈 자바 인터페이스(Interface) 선언부에 몇 가지 스프링형 어노테이션 명세표만 달아 적어두면, 런타임 빌드 환경에 애플리케이션 프레임워크가 알아서 실제 타 네트워크망 HTTP 통신 구현체 클래스들을 갈아 끼워 의존성 주입 시켜주어 버리는** 강력하고 우아한 추상화 매개 도구였습니다.
+
+### 도메인 관심사 분리의 마법 달성
+
+기존에 자리하던 흉측한 덩어리 통신 코드를 다음과 같이 깔끔하게 정리된 추상 인터페이스 파일 하나 형태로 완전히 도려내 컴포넌트 밖으로 추방시킬 수 있었습니다.
+
+```java
+// ProductServiceClient.java 명세서 (주문 서비스 백엔드망 내에 위치시킴)
+@FeignClient(name = "product-service", url = "${PRODUCT_SERVICE_URL}") // 타겟망 이름 및 주소
 public interface ProductServiceClient {
 
     @GetMapping("/api/v1/products/{id}")
     ProductResponse getProductById(@PathVariable("id") Long id);
-
-    @PostMapping("/api/v1/products/reduce-stock")
-    void reduceStock(@RequestBody List<OrderItemRequest> items);
+    
+    // 그 외 추가적으로 필요한 타 서버망 API 호출 스펙들을 자바 내부 메서드 선언하듯 나열만 하면 컴파일 끝!
 }
 ```
 
-이제 비즈니스 로직(OrderService)에서는 이 인터페이스를 주입받아 쓰기만 하면 됩니다.
-
-```java
-@Service
-@RequiredArgsConstructor
-public class OrderService {
-    private final ProductServiceClient productServiceClient;
-
-    public void createOrder(OrderRequest request) {
-        // 내부 메소드 호출하듯 타 서비스 호출!
-        ProductResponse product = productServiceClient.getProductById(request.getProductId());
-        
-        if (product.getStock() < request.getQuantity()) {
-            throw new RuntimeException("재고 부족");
-        }
-        // ... 중간 생략 ...
-    }
-}
-```
+이제 주문 생성 로직(Service 클래스) 블록 코어 구간에서는 이전같이 너저분하고 복잡한 네트워크 통신 헤더 세팅 찌꺼기 과정 따위는 전혀 의식할 필요성이 없어집니다. 단순히 자동 주입 스프링 컨테이너로 건네받은 `productServiceClient.getProductById(id)` 기능 메서드 한 줄만 딸랑 호출해버리면, 그냥 내부에 내장된 평범한 자바 객체 메모리 함수 블록을 꺼내 연산해 쓰듯이 추상적으로 우아하게 타 서비스망 리소스 데이터와 동기적으로 결합 연동되었습니다.
 
 ---
 
-## ⚠️ MSA 동기 통신의 함정: 장애 전파(Cascading Failure)
+## ⚠️ MSA 동기 통신의 맹점 방어 설계: 타임아웃 통제 락
 
-OpenFeign은 매우 편리하지만, **동기(Synchronous) 호출**이라는 점을 주의해야 합니다. 
+OpenFeign 기술이 아무리 코드의 껍데기 인터페이스를 이쁘고 가벼워 보이게 포장 가려준다고 한들, 그 통신 뼈대의 본질은 변함없이 여전히 **스레드 블로킹(Blocking)을 점유 기반으로 하는 동기형(Sync) HTTP 호출 프로토콜**이라는 절대 기초 베이스 사실을, 베타 배포망 테스트 이후 뼈저리게 체감해 겪은 해프닝 일이 있습니다.
 
-1.  **타임아웃 설정 필수**: 만약 '상품 서비스'가 응답을 주지 않고 무한정 대기한다면, '주문 서비스'의 스레드도 모두 점유되어 서비스 전체가 마비될 수 있습니다.
-2.  **서킷 브레이커(Circuit Breaker) 연동**: 타 서비스가 반복적으로 에러를 낸다면, 더 이상 호출하지 않고 즉시 에러를 반환하여 장애 전파를 차단해야 합니다. (예: Resilience4j 사용)
+테스트용 부하망에서 목적지 타겟인 '상품 조회 서비스' 컨테이너 하나만 고의성으로 일시 강제 정지 명령을 내리자, 연결 요청을 끊임없이 보낸 '주문 등록 서비스' 컨테이너의 내부 할당 스레드들이 아무리 시간이 지나도 리턴 응답이 내려오지 않자 타임아웃 없이 무한정 좀비처럼 묶여 대기 상태를 이어가다가 결국 톰캣 WAS 스레드 풀 할당량을 완전히 다 점유해 갈아먹어 고갈되어, 결국 살아있던 해당 로컬 주문 서버 덩어리마저 통째로 셧다운되어 버리는 MSA의 고질병인 연쇄 살인 장애(Cascading Failure) 전파 현상이 연출 발생한 것입니다.
 
-### 🛠️ 이  프로젝트의 타임아웃 설정 예시 (`application.yml`)
+이를 인프라 차원에서 영구 방어 봉쇄 통제하기 위해, 모든 Feign 클라이언트 통신 설정단위 스펙에 강제 셧다운 타임아웃 룰셋을 의무 강제하는 일괄 방화벽 안전 조치를 애플리케이션 야믈 프로퍼티에 취해 추가했습니다.
 
 ```yaml
+# application.yml 파이프 룰 적용 구간
 spring:
   cloud:
     openfeign:
       client:
         config:
           default:
-            connectTimeout: 5000  # 서버 연결까지의 시간
-            readTimeout: 5000     # 데이터 응답을 기다리는 시간
+            connectTimeout: 3000  # 서버 간 TCP 커넥션이 3초 안으로 안 맺어지면 미련 없이 예외 에러 끊기 도출
+            readTimeout: 3000     # 커넥션 이후 데이터 응답 전송이 3초 안에 오지 못해도 바로 버리고 에러 반환하기
 ```
 
 ---
 
-## 💡 OpenFeign 활용 꿀팁
+## 💡 회고 결론
 
-- **Header 가로채기 (RequestInterceptor)**: Gateway를 통해 전달된 JWT나 사용자 정보를 타 서비스 호출 시에도 그대로 전달하고 싶다면 인터셉터를 활용하세요.
-- **로깅 커스터마이징**: 개발 환경에서는 `Full` 로그를 통해 요청/응답 전체를 확인하고, 운영 환경에서는 `Basic` 로그로 효율을 높일 수 있습니다.
+OpenFeign 생태계 체제로의 시스템 리팩토링 시도 적용은, 그동안 비즈니스 코어 비전 로직 한가운데 떡하니 흉측하게 덩치로 자리 잡고 비대해져 있던 불순물 같은 인프라 네트워킹 강제 하드 코딩 스크립트들을 단일 인터페이스 추상 레이어 단위 스펙만으로 완벽하게 컴포넌트 은닉 격리(Encapsulation)시켜내는 놀라운 구조 개발 쾌감을 선사해 주었습니다.
 
-## 마무리
-
-OpenFeign은 MSA 시스템의 복잡한 통신 코드를 획기적으로 줄여주어 개발 생산성을 높여줍니다. 다만 동기 호출의 위험성을 인지하고, 적절한 타임아웃과 장애 복구 전략을 함께 가져가는 것이 중요합니다.
-
-다음 포스팅에서는 수많은 마이크로서비스들이 잘 돌아가고 있는지 한눈에 감시하는 방법, **Prometheus와 Grafana 모니터링**에 대해 알아보겠습니다!
+하지만 이 도입 경험은 저에게 동시에, 도입 장벽이 가벼워 보이고 사용 편의성이 극도로 뛰어난 마법의 추상화 라이브러리 도구를 내 무기 스택으로 끌고 들어왔더라도 그 감춰진 기능 이면에 돌아가는 핵심 네트워크 트래픽 통신의 근본 본질 생태계(스레드 풀의 동기화 점유 파킹, 비동기 대기 지연 등 인프라 상태)를 설계자가 한시도 의식 끈을 놓지 않고 남용에 대비하지 않는다면, 마이크로서비스 전체 망의 시스템 장애 전파라는 거대한 철퇴 리스크 방아쇠를 스스로 당겨 맞을 수 있다는 분산 시스템 통제 설계망의 막대하고 막중한 개발 컨트롤 책임감을 두피 깊게 일깨워주입 시켜 내는 훌륭한 회고 교보재 이력이 되어 주었습니다.

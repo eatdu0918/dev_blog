@@ -1,56 +1,32 @@
 ---
-title: "MSA의 Prometheus와 Grafana로 모니터링 시스템 구축하기"
-description: "서비스가 너무 많아서 어디서 에러가 나는지 모르겠다고요? sparta-msa-final-project의 실시간 메트릭 수집 및 시각화 구축기를 공유합니다."
+title: "Prometheus와 Grafana를 활용한 MSA 모니터링 시스템 전환기"
+description: "로컬 환경을 넘어선 서버 모니터링의 부재로 겪은 트러블을 해소하기 위해 실시간 메트릭 수집 생태계를 구축한 경험을 공유합니다."
 date: "2026-02-24"
-tags: ["Architecture"]
+tags: ["Architecture", "Monitoring"]
 ---
 
-# MSA의 Prometheus와 Grafana로 모니터링 시스템 구축하기
+# Prometheus와 Grafana를 활용한 MSA 모니터링 시스템 전환기
 
-마이크로서비스 아키텍처(MSA)를 도입하면 서비스 개수가 급증합니다. 평소에는 괜찮지만, 장애가 발생했을 때 어떤 서비스의 CPU가 치솟는지, 어떤 API의 응답 시간이 늦어지는지 일일이 서버에 들어가 확인할 수는 없습니다.
+마이크로서비스 아키텍처(MSA) 구조 안에서 개발을 진행하다 보니, 시스템 전체를 관망할 수 있는 "시야"가 없다는 것이 얼마나 큰 위협인지 깨닫게 된 사건이 있었습니다.
 
-[`sparta-msa-final-project`](https://github.com/eatdu0918/sparta-msa-final-project)에서는 업계 표준인 **Prometheus와 Grafana**를 활용하여 시스템 전체를 실시간으로 감시하고 있습니다.
-
----
-
-## 🏗️ 모니터링 파이프라인: 데이터는 어떻게 수집되는가?
-
-1.  **Spring Boot Actuator**: 각 마이크로서비스는 자신의 상태 지표(CPU, 메모리, HTTP 요청 횟수 등)를 `/actuator/prometheus` 엔드포인트로 노출합니다.
-2.  **Prometheus**: 주기적으로 각 서비스의 엔드포인트를 방문하여 지표를 긁어(Scraping) 자신의 시계열 DB에 저장합니다.
-3.  **Grafana**: Prometheus에 저장된 데이터를 가져와 사람이 보기 편한 차트와 대시보드로 그려줍니다.
-
-```mermaid
-graph LR
-    subgraph Services ["각 마이크로서비스"]
-        S1[Order Service]
-        S2[Product Service]
-        S3[User Service]
-    end
-
-    Prometheus[(Prometheus DB)]
-    Grafana[Grafana Dashboard]
-
-    S1 -.->|Metrics 노출| Prometheus
-    S2 -.->|Metrics 노출| Prometheus
-    S3 -.->|Metrics 노출| Prometheus
-    Prometheus -->|Data Query| Grafana
-```
+부하 테스트를 진행하던 중 특정 API의 응답 속도가 급격하게 10초 이상 지연되는 장애가 발생했는데, 주문, 상품, 유저 중 어느 서버 인스턴스의 CPU나 메모리가 병목을 겪고 있는지 당시엔 전혀 알 길이 없었습니다. 이 블라인드 상태를 벗어나기 위해 업계 표준 모니터링 스택인 **Prometheus와 Grafana**를 도입하여 인프라를 개선한 과정을 남깁니다.
 
 ---
 
-## 🛠️ 실무 핵심 설정
+## 🏗️ 메트릭 수집 파이프라인의 구성
 
-### 1. Spring Boot 서비스 설정 (`build.gradle`)
-메트릭을 노출하기 위해 라이브러리를 추가해야 합니다.
+모니터링 체계는 크게 수집원, 저장소, 시각화 도구의 세 가지 역할로 나눌 수 있었습니다.
 
-```gradle
-dependencies {
-    implementation 'org.springframework.boot:spring-boot-starter-actuator'
-    implementation 'io.micrometer:micrometer-registry-prometheus'
-}
-```
+1. **Spring Boot Actuator (수집원 대상)**: 각 마이크로서비스 프로젝트 내부에 Actuator 의존성을 포함시켜, 자신들의 현재 상태 지표(CPU 점유, JVM 메모리 공간, HTTP 요청 누적 횟수 등)를 `/actuator/prometheus` 형태의 엔드포인트 URL로 웹상에 노출하도록 조치했습니다.
+2. **Prometheus (지표 저장소)**: 백그라운드 서버에 띄워둔 Prometheus 엔진이 주기적으로 각 서비스의 노출된 엔드포인트를 직접 방문하여 데이터를 긁어오는(Scraping) Pull 방식을 통해 자신의 시계열 DB에 차곡차곡 쌓아 올렸습니다.
+3. **Grafana (시각화 대시보드)**: 사용자가 가공되지 않은 텍스트 데이터를 볼 수 없으므로, Prometheus를 데이터 소스로 연결하여 시계열 지표를 보기 편한 그래프 차트 UI로 변환 도출하는 프론트 역할을 담당했습니다.
 
-그리고 모든 지표를 외부에서 볼 수 있도록 활성화합니다 (`application.yml`).
+---
+
+## 🛠️ 실무 적용을 위한 핵심 설정 과정
+
+### 1. 지표 노출 허용 (`application.yml`)
+버전 관리상의 보안을 위해 닫혀 있는 Actuator 엔드포인트를 모니터링 도구가 외부에서 접근하여 상태 값을 긁어갈 수 있도록 활성화하는 환경 세팅 작업이 선행되었습니다.
 
 ```yaml
 management:
@@ -60,8 +36,8 @@ management:
         include: prometheus, health, info
 ```
 
-### 2. Prometheus 스크래핑 설정 (`prometheus.yml`)
-수집 서버에게 "어느 주소로 가서 정보를 가져와!"라고 알려줘야 합니다.
+### 2. Prometheus 스크래핑 타겟 설정 (`prometheus.yml`)
+수집 서버 엔진 설정 파일에 "어느 주소 배포망으로 가서 지표 수집 정보를 긁어와야 하는가"에 대한 컨테이너 타겟군 리스트를 하드코딩 명시해 주었습니다.
 
 ```yaml
 scrape_configs:
@@ -73,19 +49,19 @@ scrape_configs:
 
 ---
 
-## 📈 무엇을 감시해야 하는가? (Golden Signals)
+## 📈 수집 상태 관제의 골든 시그널 기준 확립
 
-단순히 지표를 모으는 것보다 중요한 것은 **'어떤 지표가 서비스의 장애를 예고하는가'**입니다.
+처음 모니터링 대시보드가 열렸을 때는 스프링이 기본 제공하는 지표가 수백 개에 달해 인지적으로 압도당하는 느낌에 사로잡혔었습니다. 이후 여러 구간 성능 장애 테스트 상황 대처 훈련을 거치며 인프라 관제에 있어 기본적으로 파악해야 할 핵심 통제가치 동향(Golden Signals)을 분류 채택하는 요령을 익혔습니다.
 
-1.  **Latency (대기 시간)**: 요청을 처리하는 데 걸리는 시간. 느려지면 사용자 경험이 급격히 나빠집니다.
-2.  **Traffic (트래픽)**: 시스템에 대한 수요. 갑작스러운 트래픽 폭증은 리소스 고갈로 이어집니다.
-3.  **Errors (오류)**: 요청의 실패율. 5xx 에러가 급증한다면 즉시 대응이 필요합니다.
-4.  **Saturation (포화 수준)**: 시스템이 얼마나 가득 찼는지. CPU 부하나 Memory 점유율을 통해 서버 스케일 아웃 시점을 파악합니다.
+1. **Latency (대기 응답 지연 시간)**: 트래픽 병목 현상의 1차적 스캐닝 지표. 특정 노드 서비스의 응답 지연 단위가 수직 상승하면 즉각 스레드 파악이 이뤄져야 했습니다.
+2. **Traffic (요청량 누적 추이)**: 인프라 시스템 과부하의 원인 판별 도구. 초당 API 유입 트래픽 요청량(TPS) 차트를 모니터하여 외부 DDoS 강제 공격 상황인지 스케일 한계 돌파 상황인지 인지 구별했습니다.
+3. **Errors (오류율 리포트)**: 500 단위 내부망 서버 에러율 곡선이 갑작스레 치솟는다면 애플리케이션 컴파일 단의 버전 문제가 터진 것이므로 롤백 등의 초강수 대응 가부를 결정짓는 트리거로 활용했습니다.
+4. **Saturation (포화도 지표)**: 서버 장비 CPU나 JVM 할당 메모리 점유율이 여유분을 넘어서 찼는지를 통해, 코드가 아닌 서버 하드웨어 그 자체의 깡통 물리적 성능 한계(스케일 아웃 증설 필요 시점)를 감지해 냈습니다.
 
 ---
 
-## 마무리
+## 💡 최종 회고 정리
 
-적절한 모니터링 도구는 개발자에게 **"안심하고 배포할 수 있는 용기"**를 줍니다. Prometheus와 Grafana를 통해 시스템을 투명하게 들여다볼 수 있게 되면, 장애 대응 시간(MTTR)을 획기적으로 줄일 수 있습니다.
+Prometheus와 Grafana를 도입하여 파이프라인 관제 인프라를 마련한 이후, 서버 메모리가 터져 문제가 발생할 때 터미널에서 구시대적 리눅스 명령어(`top` 등)를 치며 서버 상태를 맹목적으로 수동 점검하던 비생산적 행위 생태계가 완전히 박멸되었습니다. 
 
-다음 포스팅에서는 지표뿐만 아니라, 문제가 터졌을 때 그 상세한 원인을 찾아낼 수 있는 **ELK Stack을 이용한 로그 관리**에 대해 알아보겠습니다!
+가시적으로 눈에 뚜렷이 맺혀 보이는 UI 대시보드 지표를 통해 근거 있고 논리적인 가설을 1차적으로 세운 채 문제 국소 구역을 빠르게 좁혀 찔러 들어가는, 백엔드 서버 엔지니어링의 기본 관리 소양이자 필수 생존 요소인 관측성(Observability)의 척도 중요성을 시스템 단위로써 체득하며 시각화 인프라의 위력을 피부로 흡수할 수 있었습니다.

@@ -1,175 +1,77 @@
 ---
-title: "MSA에서 분산 트랜잭션 해결하기: Transactional Outbox 패턴"
-description: "sparta-msa-final-project의 실제 구현 사례를 통해 MSA 환경에서 데이터 정합성을 보장하는 Transactional Outbox 패턴을 깊게 파헤쳐 봅니다."
+title: "안전하게 이벤트 발송하기: Transactional Outbox 패턴 적용기"
+description: "데이터베이스 커밋과 아웃바운드 메시지 발행 사이의 정합성 유실(Dual Write) 장애를 차단한 경험을 회고합니다."
 date: "2026-02-23"
-tags: ["Architecture"]
+tags: ["Architecture", "Transaction"]
 ---
 
-# MSA에서 분산 트랜잭션 해결하기: Transactional Outbox 패턴
+# 안전하게 이벤트 발송하기: Transactional Outbox 패턴 적용기
 
-마이크로서비스 아키텍처(MSA)에서 각 서비스가 독립적인 DB를 가질 때 가장 큰 고민거리는 **"어떻게 데이터 정합성을 유지할 것인가?"**입니다. 특히 트랜잭션 내에서 **비즈니스 로직(DB Update)**과 **이벤트 발행(Message Send)**을 동시에 처리할 때 발생하는 '이벤트 유실' 문제는 시스템의 신뢰도를 떨어뜨리는 치명적인 요인이 됩니다.
+마이크로서비스 환경에서 비동기 이벤트망(Kafka)을 엮어 기능을 연쇄 동작시킬 때, 가장 원초적이면서 가장 빈번히 터졌던 장애는 엉뚱하게도 **"이벤트 메시지 발송의 누락"**이었습니다.
 
-오늘 포스팅에서는 최근 진행한 [`sparta-msa-final-project`](https://github.com/eatdu0918/sparta-msa-final-project)에서 이 문제를 어떻게 해결했는지, 실제 구현 코드를 바탕으로 **Transactional Outbox 패턴**을 소개하겠습니다.
+주문 데이터를 내 로컬 DB에 Insert 하는 행위와, 타 서버로 보낼 Kafka 이벤트를 Send 하는 행위(Dual Write) 사이에서 트랜잭션의 끈이 갈라져 발생한 이 크리티컬한 데이터 불일치 문제를, **Transactional Outbox 패턴**을 적용해 억제해 낸 개선 과정을 돌이켜 봅니다.
 
 ---
 
-## 🧐 왜 이 패턴이 필요한가? (Dual Write 문제)
+## 🛑 Dual Write 문제: 엇갈려버린 DB 커밋과 이벤트 통신
 
-주문(Order)이 생성될 때 재고 차감이나 결제 요청을 위해 Kafka로 이벤트를 보내야 한다고 가정해 봅시다.
+초기 단계의 비즈니스 코드 스케치는 다음과 같이 순진하고 위험하게 전개되어 있었습니다.
 
 ```java
 @Transactional
-public void createOrder(Order order) {
-    orderRepository.save(order); // 1. DB 저장
-    kafkaTemplate.send("order-created", order); // 2. 이벤트 발행
+public void createOrderData(Order order) {
+    orderRepository.save(order); // 1. 로컬 DB에 영속화 커밋 반영
+    kafkaTemplate.send("order-topic", order); // 2. 타 서버로 큐 이벤트 발행 시도
 }
 ```
 
-만약 1번은 성공했는데 네트워크 장애로 2번이 실패한다면? 주문은 들어왔는데 후속 처리가 전혀 되지 않는 정합성 오류가 발생합니다. 반대로 2번은 성공했는데 1번 트랜잭션이 롤백된다면, 유령 주문에 대해 결제나 재고 차감이 일어나는 더 심각한 문제가 생기죠.
-
-이러한 **Dual Write** 문제를 해결하기 위해, 이 는 DB와 메시지 브로커를 묶는 대신 **DB 트랜잭션의 원자성(Atomicity)**을 활용하기로 했습니다.
+언뜻 보면 자바 메서드 하나 안에서 묶여 있으니 안전할 줄 알았던 코드가 무수한 재앙을 배출했습니다.
+네트워크 지연 문제로 2번(Kafka 통신)에서 런타임 예외가 터지면, 1번에서 커밋된 주문 건은 하위 서비스로 연계 정보가 전혀 전달되지 못하고, 혼자서만 덩그러니 남겨진 유령 고립 데이터가 되었습니다. 반대로 통신은 잽싸게 성공했는데 1번 로직의 DB 제약 조건 처리 예외 탓에 트랜잭션이 롤백되어버리면, 타 서버들은 실제 DB에 들어오지도 않은 "가짜 주문" 이벤트에 반응하여 엉뚱한 결제 폭주를 일으키며 정합성을 갈기갈기 찢어 놓았습니다.
 
 ---
 
-## 🛠️ 구현 전략: `sparta-msa-final-project` 사례
+## 🛠️ 안전망 수립 전략: Outbox 테이블 (편지함) 도입기
 
-이 프로젝트에서는 이벤트를 즉시 발행하지 않고, 비즈니스 DB의 `outbox_events` 테이블에 먼저 저장한 뒤 별도의 프로세스가 이를 읽어 발행하는 방식을 채택했습니다.
+네트워크와 DB 사이의 이질적 분리 틈새를 메우고자, 큐에 정보를 직배송하는 것을 파기하고 자체 **안전 우편함(Outbox Table)** 매개체를 내 DB 안쪽에 구축해 심었습니다.
 
-### 🏗️ 아키텍처 다이어그램
+핵심 원리는 **"나의 비즈니스 데이터를 DB에 커밋할 때, 타 서버에 보낼 이벤트 메시지도 동일한 트랜잭션 묶음 안에서 내 로컬 DB 편지함에 함께 커밋 저장하여 100% 원자성을 확보한다"**는 논리였습니다.
 
-```mermaid
-graph TD
-    subgraph Service ["Order Service"]
-        Biz[비즈니스 로직]
-        DB[(Business DB)]
-        OutboxTable["Outbox Table"]
-        Processor["Outbox Processor<br/>(Scheduled)"]
-    end
-
-    Broker["Message Broker (Kafka)"]
-    Consumer["External Services"]
-
-    Biz -->|1. Local Transaction| DB
-    Biz -->|1. Local Transaction| OutboxTable
-    OutboxTable -.->|2. Polling| Processor
-    Processor -->|3. Kafka Publish| Broker
-    Broker -->|4. Consume| Consumer
-```
-
-### 1. Outbox 엔티티 모델링
-
-단순히 이벤트를 저장하는 것을 넘어, **상태 관리(PENDING, PROCESSED, FAILED)**와 **재시도 횟수(retryCount)**를 포함하여 견고함을 더했습니다.
-
+### 1. 우편함 엔티티 명세 규정
+내용물 정보뿐 아니라 우편 발송 여부 상태 코드를 내부에 기입해 배치 발송 제어를 통제했습니다.
 ```java
 @Entity
-@Getter
-@Builder
 public class OutboxEvent {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Id @GeneratedValue
     Long id;
 
-    String aggregateType; // 예: "Order"
-    String aggregateId;   // 주문 번호 등
-    String eventType;     // "OrderCreatedEvent"
-    String topic;         // Kafka 토픽명
+    String topic;         // 배송지 목표 큐 토픽명
+    String payload;       // 전송할 데이터 JSON 텍스트
     
-    @Column(columnDefinition = "TEXT")
-    String payload;       // JSON 직렬화 데이터
-
     @Enumerated(EnumType.STRING)
-    OutboxStatus status;  // PENDING, PROCESSED, FAILED
-
-    Integer retryCount;
-    LocalDateTime createdAt;
-    LocalDateTime processedAt;
-
-    public void markAsProcessed() {
-        this.status = OutboxStatus.PROCESSED;
-        this.processedAt = LocalDateTime.now();
-    }
-
-    public void markAsFailed() {
-        this.status = OutboxStatus.FAILED;
-        this.retryCount++;
-    }
+    OutboxStatus status;  // 발송 여부 (PENDING 대기 / PROCESSED 완료)
 }
 ```
 
-### 2. 이벤트 발행 위임 (`OutboxEventPublisher`)
-
-서비스 로직에서 Outbox 테이블 저장을 직접 처리하지 않도록 캡슐화했습니다. 이를 통해 핵심 비즈니스 로직과 인프라 관심사를 분리합니다.
-
+### 2. 단일 트랜잭션 수립 (발행 책무의 로컬화)
+비즈니스 로직은 이제 바깥망에 직접 신호를 던지지 않고, 오직 내 로컬 DB의 편지함 테이블에 레코드 행 추가만을 발생시키고 안전하게 종료됩니다.
 ```java
-@Component
-@RequiredArgsConstructor
-public class OutboxEventPublisher {
-    private final OutboxEventRepository outboxEventRepository;
-    private final ObjectMapper objectMapper;
-
-    @Transactional
-    public void publishOrderCreatedEvent(OrderCreatedEvent event) {
-        saveOutboxEvent("Order", event.getOrderNumber(), "OrderCreatedEvent", 
-                       KafkaConfig.TOPIC_ORDER_CREATED, event);
-    }
-
-    private void saveOutboxEvent(...) {
-        String payload = objectMapper.writeValueAsString(event);
-        OutboxEvent outboxEvent = OutboxEvent.create(..., payload);
-        outboxEventRepository.save(outboxEvent);
-    }
+@Transactional // 100% 동일한 DB 트랜잭션에 포개어 묶임
+public void createOrderData(Order order) {
+    orderRepository.save(order); // 핵심 주문 인서트 작업
+    
+    // 외부에 직접 발송하지 않음! 내부 Outbox 테이블에 편지를 써서 보관만 실시
+    outboxEventRepository.save(OutboxEvent.create("order-topic", ...)); 
 }
 ```
 
-### 3. 메시지 릴레이 (`OutboxProcessor`)
-
-Spring의 `@Scheduled`를 활용하여 주기적으로 `PENDING` 상태의 이벤트를 읽어 Kafka로 전송합니다.
-
-```java
-@Component
-@RequiredArgsConstructor
-public class OutboxProcessor {
-    private final OutboxEventRepository outboxEventRepository;
-    private final KafkaTemplate<String, String> kafkaTemplate;
-
-    @Scheduled(fixedDelay = 1000)
-    @Transactional
-    public void processOutboxEvents() {
-        // 1. 처리 대기 중인 이벤트 조회
-        List<OutboxEvent> events = outboxEventRepository.findByStatus(OutboxStatus.PENDING);
-
-        for (OutboxEvent event : events) {
-            try {
-                // 2. Kafka 발행
-                kafkaTemplate.send(event.getTopic(), event.getAggregateId(), event.getPayload());
-                // 3. 처리 성공 마킹
-                event.markAsProcessed();
-            } catch (Exception e) {
-                // 4. 실패 시 상태 변경 및 재시도 카운트 증가
-                event.markAsFailed();
-            }
-        }
-    }
-}
-```
+### 3. 백그라운드 우체부 스로틀링 릴레이 
+위의 과정 후엔, 별도로 스프링 단에서 주기적으로 도는 백그라운드 스케줄러 데몬을 구동시켰습니다.
+이 녀석은 지속해서 DB 우편함을 폴링(Polling) 조회하며, 아직 `PENDING` 으로 묶여 떠나가지 못한 이벤트 편지 봉투들을 거둬들여 실제 목적지인 Kafka 방에 적재 전송하고 그 즉시 상태를 `PROCESSED` 완료로 도장 찍으며 배달 정합성을 마무리 지었습니다.
 
 ---
 
-## 📈 한 걸음 더: 실무에서 고려한 것들
+## 💡 최종 회고 
 
-### 1. At-Least-Once Delivery와 멱등성
-이 패턴은 **최소 한 번 전달**을 보장합니다. Kafka 전송은 성공했지만 DB 업데이트(`PROCESSED`)가 완료되기 전 서버가 죽으면 중복 발행될 수 있습니다. 따라서 이벤트를 받는 **모든 컨슈머는 멱등성을 보장**하도록 설계했습니다.
+새로운 중개 편지함 파이프라인의 적용 이후로 "내 DB에는 잘 들어왔는데 외부 이벤트 발송은 씹혔어요" 식의 모순적인 에러 발생 빈도가 체감할 만큼 근절되었습니다.
 
-### 2. 가용성과 성능
-- **Retry 로직**: 실패한 이벤트는 특정 횟수만큼 자동 재시도하도록 `retryFailedEvents()` 스케줄러를 추가했습니다.
-- **Cleanup**: 계속 쌓이는 로그 성격의 Outbox 테이블을 관리하기 위해, 처리 완료된 지 7일이 지난 데이터는 자동으로 삭제하는 `cleanupProcessedEvents()` 로직을 포함했습니다.
-
----
-
-## 결론
-
-Transactional Outbox 패턴은 분산 시스템에서 메시지 발행의 신뢰성을 확보하는 가장 현실적이고 강력한 방법입니다.
-
-물론 Polling 방식은 DB 부하를 줄 수 있으므로, 트래픽이 매우 큰 경우 **Debezium**을 활용한 **CDC(Change Data Capture)** 방식으로의 전환도 고려해 볼 수 있습니다. 현재 이  프로젝트 수준에서는 Polling 방식으로도 충분히 안정적인 정합성을 유지하고 있습니다.
-
-MSA 환경에서 "이벤트가 사라졌어요!"라는 버그 리포트를 받고 싶지 않다면, 지금 바로 Outbox 패턴 도입을 검토해 보세요!
+기능 중심주의에 매몰되었던 과거에는 이런 부차적인 폴링 통제망 구축 구성을 그저 사족에 불과한 소모적 낭비로만 바라보았습니다. 하지만 분산 데이터를 다루면서 겪은 치명적인 예외 케이스들을 돌이켜보며, 외부 네트워크는 절대 "언제나 내가 원하는 타이밍에 접속됨을 보장받을 수 없다"는 보수적 불신 기반 하에 안전 제어 버퍼(Outbox 매개 테이블)를 덧대어 두는 프레임워크 설계가 얼마나 중요한지를 깨닫는 가치 있는 경험이었습니다.

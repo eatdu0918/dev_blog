@@ -1,90 +1,46 @@
 ---
-title: "ELK Stack으로 분산 로그 추적하기"
-description: "각 서비스 서버마다 들어가서 'cat log' 하던 시대는 끝났습니다. sparta-msa-final-project의 ELK Stack 구축기를 통해 스마트하게 로그를 관리해 봅시다."
+title: "분산 시스템에서의 로그 추적: ELK Stack 적용과 회고"
+description: "에러 추적을 위해 여러 개의 터미널을 번갈아 보던 비효율을 벗어나기 위해 중앙화 로그 시스템 로그를 구축한 경험을 기록합니다."
 date: "2026-02-24"
-tags: ["Architecture"]
+tags: ["Architecture", "Monitoring"]
 ---
 
-# ELK Stack으로 분산 로그 추적하기
+# 분산 시스템에서의 로그 추적: ELK Stack 적용과 회고
 
-마이크로서비스 아키텍처(MSA)에서 가장 힘든 순간 중 하나는 **"어디가 문제인지 모를 때"**입니다. 사용자의 주문이 왜 실패했는지 알기 위해 주문 서비스 로그를 보고, 다시 상품 서비스 로그를 찾아보고... 이렇게 수작업으로 에러 로그를 짜 맞추는 것은 시간 낭비일 뿐만 아니라 부정확합니다.
+마이크로서비스 아키텍처(MSA) 학습 중 직면했던 가장 답답한 순간은 바로 기능 단위의 런타임 버그를 잡을 때였습니다.
 
-[`sparta-msa-final-project`](https://github.com/eatdu0918/sparta-msa-final-project)에서는 **ELK Stack (Elasticsearch, Logstash, Kibana)**을 구축하여 모든 서비스의 로그를 한곳으로 모아 관리하고 있습니다.
-
----
-
-## 🪵 ELK Stack: 로그의 흐름을 한눈에
-
-1.  **Logstash**: 각 마이크로서비스가 쏘는 로그 데이터를 받아 입맛에 맞게 가공(파싱)한 뒤 저장소로 전달합니다.
-2.  **Elasticsearch**: 방대한 로그 데이터를 검색하기 좋게 인덱싱하여 저장하는 강력한 검색 엔진입니다.
-3.  **Kibana**: Elasticsearch에 저장된 로그를 웹 브라우저에서 편리하게 검색하고 시각화해 줍니다.
-
-```mermaid
-graph TD
-    subgraph Microservices ["Microservices"]
-        A[Gateway]
-        B[Order Service]
-        C[Payment Service]
-    end
-
-    Logstash["Logstash (수집/파싱)"]
-    ES[("Elasticsearch DB")]
-    Kibana["Kibana (UI 검색)"]
-
-    A & B & C -->|"Log 전송 (TCP/HTTP)"| Logstash
-    Logstash -->|"JSON 전송"| ES
-    ES -->|"Query"| Kibana
-    Kibana -->|"View"| Admin[관리자]
-```
+하나의 주문이 접수되어 처리되는 파이프라인(Gateway -> 회원 서버 조회 -> 상품 서버 상태 검사 -> 결제 서버) 과정에서 에러가 던져졌는데, 대체 어느 서버의 몇 번째 줄 코드에서 예외 롤백이 터진 것인지 각 터미널을 뒤적이느라 여념이 없었습니다. 이 수작업 디버깅 체제의 한계를 극복하기 위해 중앙 집중형 로깅 시스템을 도입했던 고민 일지를 남깁니다.
 
 ---
 
-## 🛠️ 실전 핵심 설정
+## 🪵 분산된 서버, 읽을 수 없는 파편화된 로그 
 
-### 1. Spring Boot에서 로그 전송하기 (Logback)
-애플리케이션은 로그를 콘솔에만 찍는 게 아니라, Logstash로 쏴주어야 합니다. `logstash-logback-encoder`를 사용하면 로그를 JSON 형태로 간편하게 보낼 수 있습니다.
+각 마이크로서비스 애플리케이션들은 각자의 로컬 도커 컨테이너 내부 환경에 로그 텍스트를 고립시켜 쌓고 있었습니다. 만약 하나의 클라이언트 요청이 3개의 서버를 거친다면, 장애 추적을 위해 3개의 도커 터미널을 띄워 놓고 타임스탬프를 번갈아 대조하는 원시적인 퍼즐 맞추기를 시스템적으로 수십 분간 이어나가야만 했습니다. 
 
-```xml
-<!-- logback-spring.xml 예시 -->
-<appender name="LOGSTASH" class="net.logstash.logback.appender.LogstashTcpSocketAppender">
-    <destination>logstash:5044</destination>
-    <encoder class="net.logstash.logback.encoder.LogstashEncoder" />
-</appender>
-```
-
-### 2. Logstash 설정 (`logstash.conf`)
-들어오는 로그를 받아서 Elasticsearch의 어떤 인덱스에 넣을지 정의합니다.
-
-```conf
-input {
-  tcp {
-    port => 5044
-    codec => json_lines
-  }
-}
-
-output {
-  elasticsearch {
-    hosts => ["http://elasticsearch:9200"]
-    index => "msa-logs-%{+YYYY.MM.dd}"
-  }
-}
-```
+서버의 물리적 개수가 늘어나거나 분산 큐(Kafka) 브로커 망까지 연이어 연동되는 지경에 다다르자, 로컬 디버깅 과정은 인내의 한계선을 가볍게 넘어서기 시작했습니다.
 
 ---
 
-## 🎯 MSA 로그 관리의 핵심: Correlation ID (Trace ID)
+## 🔍 ELK 스택 (Elasticsearch + Logstash + Kibana) 파이프라인 도입
 
-ELK Stack이 구축되어 있어도 로그가 뒤섞여 있으면 의미가 없습니다. **하나의 사용자 요청이 여러 서비스를 통과할 때 공유하는 유일한 ID**가 필요합니다.
+이러한 로그 맹점 및 분산 사태를 종식시키고자, 중앙화된 파이프라인 생태계를 채택하여 로그 통합 도구 모음(ELK 스택)을 아키텍처 뒷단 레이어에 추가 수립했습니다.
 
-1.  **Gateway**에서 요청이 들어올 때 `trace_id`를 생성하여 헤더에 담습니다.
-2.  각 서비스는 로그를 남길 때마다 이 `trace_id`를 함께 기록합니다.
-3.  **Kibana**에서 해당 `trace_id` 하나만 검색하면, **[Gateway -> Order -> Payment -> Product]**로 이어지는 전체 실행 흐름을 코드 수준에서 추적할 수 있습니다.
+1. **Logstash**: 모든 독립 마이크로서비스 인스턴스들이 자발적으로 콘솔 텍스트 출력 대신 Logstash의 단일 수집 창구로 로그 메타데이터를 TCP/HTTP 소켓 송달 처리하도록 구성.
+2. **Elasticsearch**: Logstash에서 건네받은 정형화된 JSON 로그 파편들을 인덱싱 분류 처리하여 대규모 단위 쿼리 조회가 용이하도록 시계열 영속화 보관.
+3. **Kibana**: 개발자(저)가 단일화된 웹브라우저 클라이언트 창에 접속해서 Elasticsearch 속의 방대한 로그 바다를 시각화 대시보드로 통제 검색할 수 있는 열람 권한 획득.
+
+### 핵심 해결책: 상관 관계(Trace) ID 생태계 부여
+
+파이프라인이 깔려 한 화면에 로그가 통합 지연 조회되었더라도, 동시다발적으로 쏟아져 들어오는 트래픽 로그의 파도 속에서 **"어떤 로그들이 완벽히 동일한 한 명 사용자의 단일 API 호출 행위 흐름인가?"**를 추적해 엮어낼 표식 뼈대가 없다면 인프라는 시체나 다름없었습니다.
+
+이 고민을 해결할 때 API Gateway 단에서 클라이언트의 최초 진입 허가 시, 단일하게 난수로 부여되는 고유 식별자(Trace ID)를 헤더에 박아 넣었습니다. 후방 서버망들은 내부 API 호출을 이관해 넘길 때마다 부여받은 동일한 Trace ID를 옮겨 붙여 로그를 발송하게끔 조율했습니다. 
+
+이제 에러가 터졌을 때 Kibana 대시보드의 검색란에 문제의 유저 Trace ID 문자열 하나만 조건 필터로 입력 조회하면, 최전방 Gateway 필터 시간대부터 마지막 응답 발송 로직까지 얽혀 들어갔던 모든 마이크로서비스의 처리 흐름이 시간순으로 질서정연하게 완벽히 연쇄 출력되는 결과를 목도할 수 있었습니다.
 
 ---
 
-## 마무리
+## 💡 최종 회고 정리
 
-ELK Stack은 구축 비용과 리소스 소모가 적지 않지만, 시스템의 복잡도가 임계치를 넘는 순간 **"가장 든든한 보험"**이 됩니다. 특히 장애 상황에서 로그 한 줄을 찾기 위해 헤매는 시간을 획기적으로 줄여주어, 서비스 복구 골든타임을 확보하게 해줍니다.
+인프라 아키텍처 구축 실습의 긴 파이프 구성을 통해, **마이크로서비스 도입은 본질적으로 유지보수를 위한 관제(Observability) 능력 학보가 무조건 동일한 무게로 수반되어야 한다**는 사실을 피부로 뼈저리게 겪게 되었습니다.
 
-이제 포스팅 시리즈의 마지막 순서로, 이 모든 서비스와 인프라를 단 한 줄의 명령어로 띄울 수 있게 해주는 **Docker Compose 개발 환경**에 대해 알아보겠습니다!
+단일 서버 프로젝트 시절에는 굳이 무겁고 방대한 ELK 클러스터를 구성할 이유 없이 IDE 디버그 탭 하나면 개발 검증이 완벽했습니다. 그러나 아키텍처 구조가 물리적으로 거대해지고 분산될수록, 본질적인 도메인 로직 설계 구현보다도 이것이 터졌을 때 즉각 파악하고 견고하게 유지보수시키기 위한 주변 생태계망(모니터링 관제 인프라) 운영 지원 구성을 학습해야 하는 것이 롱런을 위한 백엔드 엔지니어의 필연적 필수 숙명임을 통감했습니다.

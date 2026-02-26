@@ -1,96 +1,85 @@
 ---
-title: "MSA의 난제, 분산 트랜잭션 해결하기: Kafka와 Saga 패턴(보상 트랜잭션)"
-description: "sparta-msa-final-project에서 결제 실패 시 이미 차감된 재고를 어떻게 원상복구 할까요? 이벤트 기반의 Saga 패턴 실나리오를 공개합니다."
+title: "분산 트랜잭션 롤백의 고통: Kafka와 보상 트랜잭션(Saga) 설계 경험"
+description: "분리된 데이터베이스 환경에서 발생한 데이터 불일치 이슈를, 이벤트 기반 보상 트랜잭션(Saga)으로 봉합한 삽질기를 공유합니다."
 date: "2026-02-23"
-tags: ["Architectural"]
+tags: ["Architecture", "Transaction"]
 ---
 
-# MSA의 난제, 분산 트랜잭션 해결하기: Kafka와 Saga 패턴
+# 분산 트랜잭션 롤백의 고통: Kafka와 보상 트랜잭션(Saga) 설계 경험
 
-마이크로서비스 아키텍처(MSA)에서 가장 골치 아픈 문제는 **여러 서비스에 걸친 데이터의 일관성**을 유지하는 것입니다. 주문 서비스에서 DB에 저장했는데, 결제 서비스에서 장애가 발생한다면? 이미 차감된 재고는 유령처럼 사라지게 됩니다.
-
-[`sparta-msa-final-project`](https://github.com/eatdu0918/sparta-msa-final-project)에서는 이를 해결하기 위해 2PC(2-Phase Commit) 대신, 성능과 가용성이 뛰어난 **Saga 패턴(Choreography)**을 도입했습니다.
+마이크로서비스 아키텍처(MSA)를 얕보고 덤볐다가 가장 크게 데였던 부분은 바로 **분산 데이터의 무결성(일관성) 보장**이었습니다. 단일 서버 체제의 `@Transactional` 하나면 알아서 전부 롤백되던 황금기가 끝난 것입니다. 결제망이 터져도 주문 서버는 그 사실을 모른 채 '완료' 처리를 해버리는 무시무시한 데이터 불일치 버그를 해결하기 위해, 비동기 큐 기반의 Saga 패턴 롤백 방어선을 구축했던 땀 눈물 나는 경험을 회고합니다.
 
 ---
 
-## 🔄 Saga 패턴이란? (보상 트랜잭션의 마법)
+## 🚫 쪼개진 트랜잭션 망이 불러온 돌이킬 수 없는 버그
 
-Saga 패턴은 하나의 큰 트랜잭션을 여러 개의 **로컬 트랜잭션**으로 쪼개고, 각 서비스는 자신의 작업을 마친 뒤 이벤트를 발행합니다. 만약 중간에 에러가 발생하면, 앞서 성공한 작업들을 원상복구 시키는 **보상 트랜잭션(Compensation Event)**을 연쇄적으로 발생시킵니다.
+이커머스 결제망 테스트 중 시스템의 밑바닥 결함이 드러났습니다.
+주문 서비스에 "상태 생성" 커밋이 완료되고, 상품 서비스 서버에도 "재고 -1 차감" 커밋이 정상 완료되었으나 마지막 결제 모듈에서 "카드 한도 초과" 예외가 터져버린 것입니다.
 
-### 🏗️ 시나리오: 결제 실패 시 재고 복구 흐름
+당연히 전체 주문 흐름이 무산되어야 하지만, 상품 서비스 DB는 결제 쪽 에러 사정을 알 턱이 없습니다. 결과적으로 주문은 실패했는데 실물 재고는 영구적으로 1개가 공중분해되어버리는 끔찍한 파편화 데이터 결함 상태를 마주하게 되었습니다.
+
+---
+
+## 🔄 Saga 패턴의 원초적 핵심: "내 데이터는 내가 반대로 되돌린다"
+
+처음에는 동기적으로 락킹을 거는 2-Phase-Commit을 기웃거려 보았으나, 타 서버의 결함이 내 서버의 타임아웃 지연까지 유발하는 커플링 문제 탓에 도입이 불가했습니다. 그래서 대안으로 **Kafka 브로커**를 허브로 활용해 "실패 이벤트"를 전파하고 스스로 복구하게 만드는 **Saga (사가) 보상 트랜잭션 메커니즘**을 베이스로 채택했습니다.
+
+뒤에서 터진 에러 소식을 중앙 큐로 방송하면, 앞서 이미 성공 커밋을 쳐버린 서버들이 그 방송을 듣고 **"정반대의 업데이트 연산(재고 복원 등)"**을 수행하도록 수동 롤백 릴레이를 펼치는 도식도입니다.
+
+### 🏗️ 결재 실패 시 증발 재고 복구 처리 시나리오
 
 ```mermaid
 sequenceDiagram
-    participant Order as 주문 서비스
-    participant Kafka as Kafka (Message Broker)
-    participant Product as 상품 서비스
-    participant Payment as 결제 서비스
+    participant Order as 주문 서버
+    participant Kafka as Kafka
+    participant Product as 상품 서버
+    participant Payment as 결제 서버
 
-    Order->>Order: 1. 주문 생성 (PENDING)
-    Order->>Kafka: 2. OrderCreated 이벤트 발행
+    Order->>Order: 1. 주문 인서트 커밋 
+    Order->>Kafka: 2. 신규 주문 전파
     
-    Kafka-->>Product: 3. 이벤트 Consume & 재고 차감
-    Product->>Kafka: 4. ProductReserved 이벤트 발행
+    Kafka-->>Product: 3. 이벤트 수신 & 재고 -1 독단 차감 커밋 성공 
     
-    Kafka-->>Payment: 5. 결제 시도 (실패: 잔액 부족 등)
-    Payment->>Kafka: 6. PaymentFailed 이벤트 발행 (보상 트랜잭션 시작)
+    Kafka-->>Payment: 4. 결제 PG 요청 -> 잔액 부족 에러 터짐!
+    Payment->>Kafka: 5. 결제 실패 취소(PaymentFailed) 이벤트 긴급 발행 투척!
     
-    Kafka-->>Product: 7. 이벤트 Consume & 재고 원복 (보상)
-    Kafka-->>Order: 8. 이벤트 Consume & 주문 취소 (보상)
+    Kafka-->>Product: 6. 실패 이벤트 감지! 증발한 재고 +1 원상 복구 롤백 수동 쿼리 즉시 가동. (보상 로직)
+    Kafka-->>Order: 7. 실패 이벤트 감지! 주문 내역을 '취소됨/반려' 상태로 엎어치기 업데이트. (보상 로직)
 ```
 
 ---
 
-## 🛠️ 실전 코드 분석: 보상 트랜잭션 구현
+## 🛠️ 실무 적용 단위 구현: 상품 서버의 롤백 로직 탑재
 
-실제 상품 서비스(`product-service`)에서 결제 실패 이벤트를 받아 재고를 복구하는 로직을 살펴보겠습니다.
+실제 상품 관리 백엔드 서버 데몬 스레드에 결제망 실패 토픽을 전담 도청하는 파이프라인 리스너를 결속시켰습니다.
 
-### 1. 이벤트 컨슈머 (`ProductEventConsumer`)
-Kafka 토픽을 구독하다가 `payment-failed` 시그널이 오면 즉시 복구 로직을 가동합니다.
-
+### 1. 비동기 구독 큐 실패 감청 리스너 수립
 ```java
 @Component
-@Slf4j
 @RequiredArgsConstructor
 public class ProductEventConsumer {
-    private final ProductService productService;
+    private final ProductInventoryService productService;
 
-    @KafkaListener(topics = "payment-failed-topic", groupId = "product-group")
-    public void handlePaymentFailed(String message) {
-        log.info("결제 실패 이벤트 수신, 재고 복구 시작: {}", message);
-        PaymentFailedEvent event = deserialize(message); // JSON 파싱
+    // 결제망 외부 망이 터졌다는 큐 에러 구독 토픽을 상시 도청
+    @KafkaListener(topics = "payment-failed-topic")
+    public void executePaymentFailedCompensation(String payload) {
         
-        // 보상 트랜잭션 실행
-        productService.increaseStock(event.getProductId(), event.getQuantity());
+        PaymentFailedEvent event = deserializeEventPayload(payload);
+        
+        // 깎아먹은 수량 변수를 도로 플러스(+) 연산 처리하여 파괴된 데이터 원복
+        productService.increaseInventoryStock(event.getProductId(), event.getQuantity());
     }
 }
 ```
 
-### 2. 멱등성 있는 복구 로직
-보상 트랜잭션은 네트워크 이슈 등으로 여러 번 실행될 수 있습니다. 따라서 **동일한 주문에 대해 두 번 복구되지 않도록** 처리하는 것이 핵심입니다.
-
-```java
-@Transactional
-public void increaseStock(Long productId, Integer quantity) {
-    Product product = productRepository.findById(productId)
-            .orElseThrow(() -> new RuntimeException("상품 없음"));
-            
-    // 실제 프로젝트에서는 '이미 복구된 주문인가?'를 확인하는 로그성 체크(Idempotency)가 필요합니다.
-    product.addStock(quantity); 
-    log.info("재고 복구 완료: productId={}, 복구수량={}", productId, quantity);
-}
-```
+### 2. 다중 배달 맹점을 대비한 멱등성 필터(Idempotency Filter) 보완
+Kafka 큐망은 네트워크 흔들림이 생길 시 에러 알림 메시지를 두 세번씩 타겟 서버에게 펌핑 발송(At-Least-Once 다중 배송)할 수 있는 재시도 치명적 사이드 이펙트를 항상 내포하고 있습니다. 
+따라서 무식하게 들어오는 대로 모조리 재고에 +1을 산술 해버리면 엉뚱 수량 뻥튀기 사태가 나므로, 수신 쪽 백엔드 필터에서 단일 주문 ID 트랜잭션 번호를 기반으로 **'방금 들어온 이 복구 명령이 이미 과거에 종결되어 보상 마킹이 끝난 중복 패킷 로그인가?'**를 체크 검수하는 자체 멱등성 데이터 히스토리 검사 스펙을 코어 쿼리에 반드시 선행 연계시켜 예외를 방어해 내야 했습니다.
 
 ---
 
-## 💡 Saga 패턴 도입 시 주의할 점
+## 💡 종합 회고 고찰
 
-1.  **At-Least-Once Delivery**: Kafka는 메시지가 '최소 한 번' 전달되는 것을 보장합니다. 따라서 중복 메시지를 받아도 안전하도록 **컨슈머의 멱등성(Idempotency)**을 반드시 확보해야 합니다.
-2.  **격리성(Isolation) 부족**: Saga 패턴은 완료되기 전까지 데이터가 중간 상태(PENDING 등)로 보일 수 있습니다. 이를 사용자에게 어떻게 노출할지 UX 관점의 고민이 필요합니다.
-3.  **복잡한 롤백 경로**: 서비스가 늘어날수록 에러 발생 시 되돌아가야 하는 경로가 복잡해집니다. 이를 잘 관리하기 위해 이벤트 스키마를 명확히 정의해야 합니다.
+Saga 매개 파이프라인으로 거대한 보상 트랜잭션 생태계 철조망을 시스템 내부에 직접 하드 코딩해 얽매고 난 뒤, RDB가 기본 제공해주던 편리한 물리적 롤백의 부재가 얼마나 막대한 개발 복잡성 튜닝 비용을 부르는지 진정으로 깨닫게 되었습니다. 
 
-## 마무리
-
-분산 트랜잭션은 MSA의 가장 큰 숙제이지만, Kafka와 Saga 패턴을 조합하면 강한 일관성 대신 **최종 정합성(Eventual Consistency)**을 확보하여 시스템의 확장성과 안정성을 동시에 챙길 수 있습니다.
-
-다음 포스팅에서는 이 모든 서비스가 어떻게 자기만의 DB를 가지고 살아가고 있는지, **Database per Service** 패턴에 대해 다뤄보겠습니다!
+이벤트 기반의 비동기 채널 뒤편에서 '결국 언젠가는 수습되어 맞춰진다'는 결과적 정합성(Eventual Consistency)이라는 이질적 패러다임을 메달기 위해, 개발자가 수작업으로 각 예외 발생 건마다 보상 원상 연산 쿼리 구조 플로우를 수공예 하듯 한 땀 한 땀 역방향으로 꿰매고 묶어야 한다는 처절한 트레이드오프 설계 본질을 몸소 터득한 가장 큰 아키텍처 실무 성장이었습니다.

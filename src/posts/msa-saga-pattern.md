@@ -1,131 +1,84 @@
 ---
-title: "MSA에서 분산 트랜잭션 해결하기: Saga 패턴 (Choreography)"
-description: "각 서비스의 독립성을 유지하면서 데이터 일관성을 보장하는 Saga 패턴에 대해 알아봅니다. 실제 이커머스 프로젝트 사례를 통해 Choreography 방식의 구현과 보상 트랜잭션을 살펴봅니다."
+title: "이벤트 기반 데이터 정합성 맞추기: Choreography 기반 Saga 구조 경험"
+description: "각 서비스의 자율성에 의존하여 롤백 플로우를 이어 나가는 이벤트 소싱 구조의 장단점을 파악한 과정을 공유합니다."
 date: "2026-02-23"
-tags: ["Architecture"]
+tags: ["Architecture", "Transaction"]
 ---
 
-# MSA에서 분산 트랜잭션 해결하기: Saga 패턴 (Choreography)
+# 이벤트 기반 데이터 정합성 맞추기: Choreography 기반 Saga 구조 경험
 
-마이크로서비스 아키텍처(MSA)에서 가장 까다로운 문제 중 하나는 여러 서비스에 걸쳐 있는 비즈니스 로직의 **데이터 일관성(Data Consistency)**을 어떻게 유지하느냐입니다.
+분산 환경에서 각자의 DB 데이터를 원자적(All or Nothing)인 것처럼 묶어내기 위해서 **Saga 패턴 (보상 트랜잭션)** 개념을 알게 된 이후, 이를 시스템 로직으로 어떻게 이어 붙일지 고민에 빠졌습니다.
 
-이전 포스팅에서 다룬 [Transactional Outbox 패턴]이 '이벤트 발행의 원자성'을 해결해준다면, 오늘 소개할 **Saga 패턴**은 '여러 서비스 간의 트랜잭션 관리'를 담당합니다.
-
-특히 실제 프로젝트 [e-commerce_msa](https://github.com/eatdu0918/e-commerce_msa)에 적용된 **Choreography-based Saga** 방식을 중심으로 알아보겠습니다.
-
----
-
-## 🧐 Saga 패턴이란?
-
-Saga 패턴은 분산 트랜잭션을 구현하는 방식 중 하나로, 로컬 트랜잭션을 순차적으로 실행하며 각 단계가 성공하면 다음 단계로 넘어가고, 실패하면 이전 단계들을 취소하는 **보상 트랜잭션(Compensating Transaction)**을 실행하는 패턴입니다.
-
-### 핵심 개념: 보상 트랜잭션
-Saga 패턴에는 ACID 트랜잭션의 'Rollback' 개념이 없습니다. 대신, 이미 Commit된 로컬 트랜잭션을 논리적으로 취소하는 별도의 작업을 수행해야 하는데, 이를 보상 트랜잭션이라고 합니다.
-
-- **결제 성공 시**: 주문 상태 완료 (정방향)
-- **결제 실패 시**: 차감했던 재고 복구 (역방향/보상)
+Saga 구축 방식은 중앙 통제자가 모든 순서를 지휘하는 Orchestration 방식과, 서비스들이 서로 이벤트망만 보고 각자의 할 일을 자율적으로 해치우는 **Choreography 방식**으로 나뉩니다. 시스템 결합도를 타이트하게 묶고 싶지 않다는 일념 하나로 도전했던 Choreography(안무) 방식형 구조의 훈련기를 남깁니다.
 
 ---
 
-## 🏗️ Choreography-based Saga (안무 방식)
+## 🏗️ 릴레이 구조: 무전기를 통한 눈치껏 행동하기 (Choreography)
 
-별도의 중앙 제어자(Orchestrator) 없이, 각 서비스가 이벤트를 발행하고 구독하며 자율적으로 트랜잭션을 이어가는 방식입니다.
+이 방식 체계 안에서는 프로젝트 내부 서버들을 지휘하는 총괄 컨트롤 타워 객체가 결코 존재하지 않습니다. 모든 서비스 인스턴스는 오로지 메시지 브로커(Kafka)를 통해 울려 퍼지는 무언의 '이벤트 방송'에만 의존하여 다음 스텝을 밟았습니다.
 
-### e-commerce_msa의 정상 흐름 (Happy Path)
+- 주문 서버: "주문 내역 DB 넣었음! 다음 순서 알아서 진행 요망." (방송)
+- 상품 서버: "(방송 듣고) 어 주문 들어왔네? 내 DB 재고 목록 차감 시킴!" (방송)
+- 결제 서버: "(방송 듣고) 결제 카드 승인 요청 따냄!"
+
+---
+
+## 🛠️ 실무 적용: 연쇄적인 보상 트랜잭션 릴레이 (에러 발생 턴)
+
+각자의 알림에 의존하다 보니 장애 상황 시의 롤백 또한 이벤트 브로드캐스팅 라디오로만 의존해야 했습니다. 결제 망에서 통신 장애가 터졌을 때, 기존에 실행되었던 트랜잭션을 원복시키는 연쇄 보상 릴레이 구조는 마치 도미노가 무너지듯 역방향으로 전달되었습니다.
+
+### 실패 및 방어 보상 트랜잭션 발생 플로우
 
 ```mermaid
-sequenceDiagram
-    participant Order as 주문 서비스
-    participant Product as 상품 서비스
-    participant Discount as 할인 서비스
-    participant Payment as 결제 서비스
-    participant Kafka as Message Broker (Kafka)
-
-    Order->>Order: 1. 주문 생성 (Pending)
-    Order->>Kafka: OrderCreatedEvent 발행
-    Kafka-->>Product: 2. 재고 차감
-    Product->>Kafka: StockDecreasedEvent 발행
-    Kafka-->>Discount: 3. 쿠폰 적용
-    Discount->>Kafka: CouponUsedEvent 발행
-    Kafka-->>Payment: 4. 최종 결제
-    Payment->>Kafka: PaymentCompletedEvent 발행
-    Kafka-->>Order: 5. 주문 상태 업데이트 (Completed)
+graph LR
+    Payment[결제 터짐] -->|결제 실패 이벤트 전파| Order[주문 내역 반려 상태로 롤백]
+    Order -->|주문 취소 이벤트 2차 전파| Product[차감된 재고 복구 롤백]
+    Order -->|주문 취소 이벤트 2차 전파| Discount[사용된 쿠폰 미사용으로 롤백]
 ```
 
-각 서비스는 자기가 할 일을 하고 "나 이거 했어!"라고 이벤트를 던집니다. 다음 서비스는 그 이벤트를 보고 자기 할 일을 이어서 수행합니다.
-
----
-
-## 🛠️ 실무 적용 사례: 보상 트랜잭션 구현
-
-만약 마지막 단계인 **결제 서비스**에서 잔액 부족 등으로 결제가 실패한다면 어떻게 될까요? 이미 차감된 재고와 사용 처리된 쿠폰을 다시 원복해야 합니다.
-
-### 실패 및 보상 트랜잭션 흐름
-
-```mermaid
-graph TD
-    Payment[결제 실패] -->|PaymentFailedEvent| Order[주문 취소 처리]
-    Order -->|OrderCancelledEvent| Product[재고 복구]
-    Order -->|OrderCancelledEvent| Discount[쿠폰 복구]
-```
-
-### 💻 코드 예시 (Java/Spring)
-
-**1. 주문 서비스: 실패 이벤트 수신 및 취소 이벤트 발행**
-
+**1. 주문 서비스: 결제단 실패 브로드캐스트 수신 및 자체 취소 상태 변경**
 ```java
 @Component
-@RequiredArgsConstructor
 public class OrderEventConsumer {
-    private final OrderService orderService;
-    private final OrderEventProducer eventProducer;
-
-    @KafkaListener(topics = "payment-failed")
-    public void handlePaymentFailed(PaymentFailedEvent event) {
-        // 주문 상태를 CANCELLED로 변경
-        orderService.cancelOrder(event.getOrderId());
+    @KafkaListener(topics = "payment-failed-topic")
+    public void executePaymentFailCompensation(PaymentFailedEvent event) {
+        // 내 DB의 주문 건을 강제로 CANCEL 처리 롤백 (1차 보상)
+        orderService.revertToCancelOrder(event.getOrderId());
         
-        // 다른 서비스들에게 롤백을 요청하는 이벤트 발행
-        eventProducer.publishOrderCancelled(new OrderCancelledEvent(event.getOrderId()));
+        // 내 처리가 끝났으니, 재고나 부가정보도 원상복귀 하라고 2차 릴레이 방송 송출
+        eventProducer.publish("order-cancelled-topic", event.getOrderId());
     }
 }
 ```
 
-**2. 상품 서비스: 보상 트랜잭션 수행 (재고 복구)**
-
+**2. 상품 서비스: 2차 릴레이 방송을 듣고 최종 재고 원복 완료 (2차 보상)**
 ```java
 @Component
-@RequiredArgsConstructor
 public class ProductEventConsumer {
-    private final ProductService productService;
-
-    @KafkaListener(topics = "order-cancelled")
-    public void rollbackStock(OrderCancelledEvent event) {
-        // 이전에 차감했던 재고를 다시 증액
+    @KafkaListener(topics = "order-cancelled-topic")
+    public void executeStockRevertCompensation(OrderCancelledEvent event) {
+        // 이전에 빠져버린 재고를 다시 +1 복구 쿼리 가동
         productService.increaseStock(event.getProductId(), event.getQuantity());
-        log.info("보상 트랜잭션 실행: 상품 {} 재고 복구 완료", event.getProductId());
     }
 }
 ```
 
 ---
 
-## ⚖️ 장점과 단점
+## ⚖️ 체감한 아키텍처의 한계와 성과
 
-### 장점
-1.  **느슨한 결합(Loose Coupling)**: 중앙 제어자가 없어 서비스 간 의존성이 낮고 독립적으로 확장 가능합니다.
-2.  **단순성**: 소규모 시스템에서는 구현이 빠르고 직관적입니다.
+### 성과
+1. **결합도의 완벽한 분리**: 어떤 서버가 죽거나 코드가 재편되더라도, 오직 "이벤트 문자열 정보"만 주고받으므로 서비스들 간의 직접 통신망 커플링이 대폭 낮아지는 가치를 수확했습니다.
+2. **단일 실패 지점(SPOF) 방어**: 통제를 담당하는 중앙 인스턴스가 따로 존재하는 것이 아니므로, 전체 인프라 라인이 멈춰 시스템 통제권 자체가 날아가는 리스크가 최소화되었습니다.
 
-### 단점
-1.  **가시성 부족**: 트랜잭션이 현재 어느 단계에 있는지 한눈에 파악하기 어렵습니다. (추적을 위한 분산 트레이싱 필수)
-2.  **순환 의존성**: 서비스가 많아지면 이벤트가 꼬여 사이클이 발생할 위험이 있습니다.
+### 부채와 한계점
+1. **스파게티 이벤트 플로우 추적의 난해성**: 3개 이상의 서버망이 엮이는 릴레이에서 시스템의 현재 스텝이 어디까지 나아갔는지, 에러가 터졌다면 도대체 어디서 터져서 어디까지 보상되었는지 모니터링하기가 극도로 까다로웠습니다.
+2. **사이클릭 루프 위험성**: 자칫 방송 토픽(Topic)을 오타로 잘못 발행하거나 로직이 꼬이게 짜면, 핑퐁을 주고받듯 두 서버가 계속해서 서로의 이벤트를 무한정 건드려 시스템 데이터가 마비되는 리스크를 항상 염두에 두어야 했습니다.
 
 ---
 
-## 결론
+## 💡 최종 회고
 
-Saga 패턴은 MSA에서 데이터 정합성을 포기하지 않으면서도 시스템의 가용성을 높일 수 있는 강력한 도구입니다. 
+순수 이벤트 구독 채널 기반의 Choreography 방식 Saga 패턴은, 중앙 통제 로직 비용 없이 스마트하게 데이터 정합성 구멍을 간접적으로 메워주는 매력적인 대안 수단이었습니다.
 
-특히 **Choreography 방식**은 Kafka와 같은 메시지 브로커를 활용하여 서비스 간 자율성을 극대화할 수 있습니다. 시스템이 더 복잡해진다면 중앙에서 흐름을 관리하는 **Orchestration 방식**도 고려해 볼 수 있지만, 처음 시작은 `e-commerce_msa` 프로젝트처럼 이벤트 기반의 안무 방식으로 시작하는 것을 추천합니다.
-
-보상 트랜잭션 구현 시에는 반드시 **멱등성(Idempotency)**을 고려하여 중복 이벤트 처리에도 안전하게 설계해야 한다는 점을 잊지 마세요!
+하지만 요구사항 스펙이 거대해지고 관여하는 서비스 도메인의 숫자가 4개를 초과하는 순간부터, 흐름 통제 엔진을 탑재시킨 Orchestration 베이스로 강제 롤아웃 아키텍팅을 해야겠다는 뼈저린 교훈을 얻을 수 있었습니다.
