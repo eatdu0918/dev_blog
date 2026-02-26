@@ -1,5 +1,5 @@
 ---
-published: true
+published: false
 title: "디바운스(Debounce)와 스로틀(Throttle) 실무 적용기: 브라우저 부하 줄이기"
 description: "과도한 이벤트 발생으로 인해 브라우저 렌더링 지연 및 서버 요청 과부하를 겪었던 문제를 디바운스와 스로틀 기법으로 극복한 경험을 정리합니다."
 date: "2026-02-25"

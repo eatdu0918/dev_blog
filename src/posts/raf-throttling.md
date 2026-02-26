@@ -1,5 +1,5 @@
 ---
-published: true
+published: false
 title: "requestAnimationFrame(rAF) 기반 스로틀링: 부드러운 스크롤 애니메이션 최적화 경험"
 description: "기존 setTimeout 스로틀링의 렌더링 한계를 경험하고, 프레임 단위 동기화를 통해 스크롤 연동 시각 효과를 최적화한 과정을 정리합니다."
 date: "2026-02-25"

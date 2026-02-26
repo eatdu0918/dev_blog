@@ -1,5 +1,5 @@
 ---
-published: true
+published: false
 title: "자바스크립트 애니메이션 제어: setTimeout 한계와 requestAnimationFrame"
 description: "과거 타이머 기반 애니메이션 로직의 렌더링 품질 저하(Frame Drop) 문제를 겪고 브라우저 API로 리팩토링한 회고를 기록합니다."
 date: "2026-02-25"
