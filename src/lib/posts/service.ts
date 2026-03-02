@@ -9,10 +9,10 @@ export function getAllPosts(category?: string): PostMetadata[] {
         return parsePostMetadata(slug, fileContents);
     });
 
-    // Filter by published status (show all in development)
+    // Filter by published status (show all in development, default to true in production unless explicitly false)
     const publishedPosts = process.env.NODE_ENV === 'development'
         ? allPostsData
-        : allPostsData.filter((post) => post.published === true);
+        : allPostsData.filter((post) => post.published !== false);
 
     // Filter by category if provided
     const filteredPosts = category
