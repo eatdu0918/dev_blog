@@ -15,10 +15,8 @@ export default function SandpackRenderer({ contentHtml }: SandpackRendererProps)
 
     const parts: Array<{ type: 'html' | 'sandpack' | 'mermaid', content?: string, files?: Record<string, string>, mode?: 'editor' | 'test', code?: string }> = [];
 
-    let currentHtml = contentHtml;
-
     // 임시로 모든 placeholder 매칭 정보를 수집
-    const matches: Array<{ index: number, length: number, node: any }> = [];
+    const matches: Array<{ index: number, length: number, node: Record<string, string> }> = [];
 
     let match;
     while ((match = sandpackRegex.exec(contentHtml)) !== null) {

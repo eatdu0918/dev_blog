@@ -4,7 +4,7 @@ export interface PostMetadata {
     title: string;
     categories?: string[];
     published?: boolean;
-    [key: string]: any;
+    [key: string]: unknown;
 }
 
 export interface PostContent extends PostMetadata {
