@@ -8,12 +8,15 @@ export default function CommentForm({ slug }: { slug: string }) {
     const [isPending, setIsPending] = useState(false);
     const [nickname, setNickname] = useState('');
     const [content, setContent] = useState('');
+    const [error, setError] = useState<string | null>(null);
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
         if (!content.trim()) return;
 
         setIsPending(true);
+        setError(null);
+
         const formData = new FormData();
         formData.append('slug', slug);
         formData.append('nickname', nickname);
@@ -25,6 +28,9 @@ export default function CommentForm({ slug }: { slug: string }) {
         if (result.success) {
             setContent('');
             setNickname('');
+            setError(null);
+        } else if (result.error) {
+            setError(result.error);
         }
     }
 
@@ -57,6 +63,12 @@ export default function CommentForm({ slug }: { slug: string }) {
                     rows={4}
                     className="w-full p-4 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all text-sm resize-none"
                 />
+
+                {error && (
+                    <div className="p-3 text-xs text-red-500 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                        {error}
+                    </div>
+                )}
 
                 <div className="flex justify-end">
                     <button

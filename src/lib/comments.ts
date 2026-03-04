@@ -28,18 +28,23 @@ export async function getComments(slug: string): Promise<Comment[]> {
 }
 
 export async function addComment(comment: Omit<Comment, 'id' | 'createdAt'>): Promise<Comment> {
-    const newComment = await prisma.comment.create({
-        data: {
-            slug: comment.slug,
-            nickname: comment.nickname,
-            content: comment.content,
-            ip: comment.ip,
-        },
-    });
+    try {
+        const newComment = await prisma.comment.create({
+            data: {
+                slug: comment.slug,
+                nickname: comment.nickname,
+                content: comment.content,
+                ip: comment.ip,
+            },
+        });
 
-    return {
-        ...newComment,
-        ip: newComment.ip || '127.0.0.1',
-        createdAt: newComment.createdAt.toISOString(),
-    };
+        return {
+            ...newComment,
+            ip: newComment.ip || '127.0.0.1',
+            createdAt: newComment.createdAt.toISOString(),
+        };
+    } catch (error) {
+        console.error('Prisma comment creation failed:', error);
+        throw new Error('댓글 저장 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
+    }
 }
