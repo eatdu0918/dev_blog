@@ -5,9 +5,17 @@
   "packageManager": "pnpm@10.30.1",
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "prisma generate && next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "postinstall": "prisma generate"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@prisma/client",
+      "prisma",
+      "@prisma/engines"
+    ]
   },
   "dependencies": {
     "@codesandbox/sandpack-react": "^2.20.0",
