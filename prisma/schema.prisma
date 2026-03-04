@@ -1,0 +1,20 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  slug      String
+  nickname  String   @default("익명")
+  content   String   @db.Text
+  ip        String?
+  createdAt DateTime @default(now())
+
+  @@index([slug])
+}
