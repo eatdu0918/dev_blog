@@ -14,19 +14,19 @@ export async function submitComment(formData: FormData) {
             return { error: '필수 항목이 누락되었습니다.' };
         }
 
-        // IP 주소 가져오기
+        // IP 주소 가져오기 (Vercel 환경 최적화: x-real-ip 우선)
         const headerList = await headers();
-        const forwardedFor = headerList.get('x-forwarded-for');
         const realIp = headerList.get('x-real-ip');
+        const forwardedFor = headerList.get('x-forwarded-for');
 
         let ip = '127.0.0.1';
-        if (forwardedFor) {
-            ip = forwardedFor.split(',')[0].trim();
-        } else if (realIp) {
+        if (realIp) {
             ip = realIp;
+        } else if (forwardedFor) {
+            ip = forwardedFor.split(',')[0].trim();
         }
 
-        console.log(`Adding comment for slug: ${slug}, IP: ${ip}, Nickname: ${nickname}`);
+        console.log(`[Comment Debug] Slug: ${slug}, IP: ${ip}, RealIP: ${realIp}, ForwardedFor: ${forwardedFor}`);
 
         await addComment({
             slug,
