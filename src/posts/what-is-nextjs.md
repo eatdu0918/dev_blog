@@ -33,7 +33,7 @@ React 라이브러리의 컴포넌트 생태계를 학습하며 클라이언트 
 
 이를 통해 사용자에게 자바스크립트 다운로드 지연 대기시간 없이 렌더링 결과물을 즉각 제공하고, 봇 크롤러에게도 완성된 마크다운을 쥐여 줄 수 있는 매력이 결정적인 기술 스택 전향의 트리거가 되었다.
 
-![Next.js의 렌더링 최적화 생태계 구조](/images/nextjs_rendering_flow.png)
+![Next.js의 렌더링 최적화 생태계 구조](/public/images/nextjs_rendering_flow.png)
 
 ---
 

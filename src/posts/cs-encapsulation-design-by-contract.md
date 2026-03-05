@@ -17,7 +17,7 @@ categories: ['Programming', 'CS']
 
 캡슐화는 객체의 상태(필드)를 외부에서 직접 수정하지 못하도록 `private`으로 감추고, 오직 **검증된 메서드(Public API)**를 통해서만 대화하게 하는 기법입니다.
 
-![캡슐화와 계약의 조화](/images/encapsulation_design_by_contract_concept.png)
+![캡슐화와 계약의 조화](/public/images/encapsulation_design_by_contract_concept.png)
 
 위 그림처럼 캡슐화가 객체의 내부를 안전하게 보호하는 보호막이라면, 그 표면에 적힌 **계약(Rule)**들은 이 객체가 올바르게 작동하기 위해 지켜야 할 약속들을 의미합니다.
 

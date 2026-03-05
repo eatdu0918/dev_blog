@@ -20,7 +20,7 @@ categories: ['Programming', 'CS']
 - **언더 엔지니어링 (Under-Engineering)**: 복잡한 로직을 한 곳에 뭉뚱그려 짜는 것입니다. 당장은 빠르지만 나중에는 수정하기가 불가능해지는 '스파게티 코드'가 됩니다.
 - **오버 엔지니어링 (Over-Engineering)**: 나중에 필요할지도 모른다는 생각에 미리 인터페이스와 추상화 벽을 과하게 치는 것입니다. 코드만 늘어나고 이해하기 힘든 '복잡한 유령 도시'가 됩니다.
 
-![오버/언더/적정 추상화 비교](/images/appropriate_abstraction_concept.png)
+![오버/언더/적정 추상화 비교](/public/images/appropriate_abstraction_concept.png)
 
 위 그림처럼 '커피 한 잔'을 마시기 위해 '거대한 공장 기계(Over)'를 가동할 필요는 없습니다. 하지만 '자동차'를 만드는데 '망치 하나(Under)'로 할 수도 없죠. 핵심은 **문제의 크기에 맞는 도구를 선택하는 것**입니다.
 

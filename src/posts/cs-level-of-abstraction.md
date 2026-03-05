@@ -22,7 +22,7 @@ categories: ['Programming', 'CS']
 
 좋은 코드는 각 함수나 클래스가 **단일 추상화 수준(SLAP, Single Level of Abstraction Principle)**을 유지해야 합니다. 비즈니스 로직을 다루는 함수는 비즈니스 로직만 다루고, 세부 구현은 다른 함수에 위임해야 가독성이 극대화됩니다.
 
-![추상화 수준의 계층 구조](/images/level_of_abstraction_concept.png)
+![추상화 수준의 계층 구조](/public/images/level_of_abstraction_concept.png)
 
 위 그림처럼 '주문 처리'라는 추상적인 목표(High Level) 아래에 'DB 조회', 'JSON 파싱', 'HTTP 요청'과 같은 구체적인 기술(Low Level)이 레이어처럼 쌓여 있어야 합니다.
 

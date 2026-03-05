@@ -17,7 +17,7 @@ categories: ['Programming', 'CS']
 
 추상화는 복잡한 내부 동작을 감추고 사용자에게 편리한 도구를 제공하는 과정입니다. 하지만 **추상화가 완벽하지 않아 내부의 로우레벨 구현 내용이 상위 레벨로 새어 나오는 현상**을 추상화 누수라고 합니다.
 
-![추상화 누수의 시각화](/images/leaky_abstraction_concept.png)
+![추상화 누수의 시각화](/public/images/leaky_abstraction_concept.png)
 
 위 그림처럼 견고하게 감싸진 추상화 계층(Pipe/Box)이라 하더라도, 때로는 내부의 복잡한 태엽(Gears)이나 코드 조각들이 외부로 노출되어 우리가 그것을 직접 신경 써야만 하는 상황이 발생합니다.
 

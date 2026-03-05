@@ -20,7 +20,7 @@ categories: ['Programming', 'CS']
 - **오버로딩(Overloading)**: 같은 이름의 메서드를 다른 시그니처(파라미터 개수나 타입)로 정의하는 것입니다. '컴파일 타임'에 어떤 메서드가 호출될지 결정됩니다.
 - **다형성/오버라이딩(Dynamic Polymorphism)**: 부모 클래스의 메서드를 자식 클래스에서 재정의하는 것입니다. '런타임'에 실제 객체의 타입에 따라 어떤 메서드가 호출될지 결정됩니다.
 
-![오버로딩 vs 다형성 개념](/images/overloading_vs_polymorphism_concept.png)
+![오버로딩 vs 다형성 개념](/public/images/overloading_vs_polymorphism_concept.png)
 
 위 그림처럼, 오버로딩은 하나의 기계에 다양한 입력을 넣는 것과 같고, 다형성은 각기 다른 개성을 가진 기계들이 동일한 '시작' 버튼에 저마다의 방식으로 반응하는 것과 같습니다.
 

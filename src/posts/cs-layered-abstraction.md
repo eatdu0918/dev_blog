@@ -21,7 +21,7 @@ categories: ['Programming', 'CS']
 2. **서비스 계층 (Service Layer)**: 애플리케이션의 핵심 비즈니스 정책을 구현합니다. 데이터가 DB에 저장되는지 파일에 저장되는지에는 무관심합니다.
 3. **데이터 접근 계층 (Data Access Layer)**: 구체적인 영속성 기술(DB, SQL, NoSQL)을 다룹니다.
 
-![계층별 추상화의 시각적 구조](/images/layered_abstraction_concept.png)
+![계층별 추상화의 시각적 구조](/public/images/layered_abstraction_concept.png)
 
 위 그림처럼 마치 층이 나뉜 건물이나 케이크처럼 설계를 쌓아 올리면, 각 층은 독립적으로 유지보수하고 교체할 수 있는 유연함을 얻게 됩니다.
 

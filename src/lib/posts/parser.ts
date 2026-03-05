@@ -74,6 +74,10 @@ export async function parsePostContent(slug: string, fileContents: string): Prom
 
     let contentHtml = processedContent.toString();
 
+    // Normalize image paths: remove '/public' prefix if it exists in src
+    // This allows local editor compatibility while maintaining Next.js public folder structure
+    contentHtml = contentHtml.replace(/<img([^>]+)src="\/public\/images\/([^"]+)"/g, '<img$1src="/images/$2"');
+
     // Re-inject sandpack blocks
     sandpackBlocks.forEach((block, index) => {
         const encodedFiles = Buffer.from(JSON.stringify(block.files), 'utf-8').toString('base64');

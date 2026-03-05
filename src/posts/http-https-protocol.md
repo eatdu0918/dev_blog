@@ -8,7 +8,7 @@ description: "웹 통신의 기본인 HTTP와, 암호화 계층을 더해 보안
 
 이 글에서는 네트워크 통신의 기초인 HTTP의 원형과, 암호화가 더해진 HTTPS의 차이를 짚어보고, 이를 테스트 코드로 간단히 시뮬레이션해 보며 깨달은 점을 정리해 보려 합니다.
 
-![HTTP 보안과 HTTPS 암호화 비교](/images/http_vs_https.png)
+![HTTP 보안과 HTTPS 암호화 비교](/public/images/http_vs_https.png)
 *데이터가 평문으로 이동하는 HTTP와 암호화 방패가 적용된 HTTPS의 시각적 비교*
 
 ## 상태를 주고받는 기본 원리: HTTP

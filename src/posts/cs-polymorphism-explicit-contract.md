@@ -19,7 +19,7 @@ categories: ['Programming', 'CS']
 
 이때 **명시적 시그니처**는 "이 객체를 쓰려면 무조건 이 규칙(메서드 이름, 매개변수, 반환 타입)을 지켜야 한다"는 일종의 약속, 즉 **계약(Contract)** 역할을 합니다.
 
-![다형성과 명시적 시그니처 개념](/images/polymorphism_explicit_contract_concept.png)
+![다형성과 명시적 시그니처 개념](/public/images/polymorphism_explicit_contract_concept.png)
 
 위 그림처럼 '도형(Shape)'이라는 추상적인 계약이 있고, 그 아래에 '원(Circle)', '사각형(Square)' 등이 이 계약을 충족하도록 설계되어 있다면, 우리는 이 객체들이 어떤 것이든 상관없이 안심하고 사용할 수 있습니다.
 
