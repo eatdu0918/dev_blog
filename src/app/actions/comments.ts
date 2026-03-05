@@ -26,6 +26,8 @@ export async function submitComment(formData: FormData) {
             ip = realIp;
         }
 
+        console.log(`Adding comment for slug: ${slug}, IP: ${ip}, Nickname: ${nickname}`);
+
         await addComment({
             slug,
             nickname,

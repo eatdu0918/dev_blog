@@ -43,8 +43,8 @@ export async function addComment(comment: Omit<Comment, 'id' | 'createdAt'>): Pr
             ip: newComment.ip || '127.0.0.1',
             createdAt: newComment.createdAt.toISOString(),
         };
-    } catch (error) {
+    } catch (error: any) {
         console.error('Prisma comment creation failed:', error);
-        throw new Error('댓글 저장 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
+        throw new Error(`댓글 저장 중 오류가 발생했습니다: ${error.message || '잠시 후 다시 시도해주세요.'}`);
     }
 }
