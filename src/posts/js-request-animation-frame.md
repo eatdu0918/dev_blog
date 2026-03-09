@@ -1,8 +1,8 @@
 ---
 title: "requestAnimationFrame으로 구현하는 부드러운 웹 애니메이션"
 description: "setInterval의 한계를 이해하고, 브라우저 렌더링 최적화의 핵심인 requestAnimationFrame의 동작 원리와 장점을 살펴봅니다."
-date: "2026-03-08"
-tags: ["JavaScript", "Frontend", "Animation", "Performance", "rAF"]
+date: "2026-03-09"
+tags: ["JavaScript", "Frontend"]
 ---
 
 # requestAnimationFrame으로 구현하는 부드러운 웹 애니메이션
