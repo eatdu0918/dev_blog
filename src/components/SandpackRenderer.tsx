@@ -3,6 +3,7 @@
 import React from 'react';
 import SandpackWrapper from './SandpackWrapper';
 import MermaidRenderer from './MermaidRenderer';
+import DataStructuresCanvas from './DataStructuresCanvas';
 
 interface SandpackRendererProps {
     contentHtml: string;
@@ -12,8 +13,9 @@ export default function SandpackRenderer({ contentHtml }: SandpackRendererProps)
     // parser.ts에서 삽입한 placeholder들을 찾습니다.
     const sandpackRegex = /<div class="sandpack-placeholder" data-files="(.*?)" data-mode="(.*?)"><\/div>/g;
     const mermaidRegex = /<div class="mermaid-placeholder" data-code="(.*?)"><\/div>/g;
+    const componentRegex = /<div class="component-placeholder" data-name="(.*?)"><\/div>/g;
 
-    const parts: Array<{ type: 'html' | 'sandpack' | 'mermaid', content?: string, files?: Record<string, string>, mode?: 'editor' | 'test', code?: string }> = [];
+    const parts: Array<{ type: 'html' | 'sandpack' | 'mermaid' | 'component', content?: string, files?: Record<string, string>, mode?: 'editor' | 'test', code?: string, name?: string }> = [];
 
     // 임시로 모든 placeholder 매칭 정보를 수집
     const matches: Array<{ index: number, length: number, node: Record<string, string> }> = [];
@@ -33,6 +35,15 @@ export default function SandpackRenderer({ contentHtml }: SandpackRendererProps)
             index: match.index,
             length: match[0].length,
             node: { type: 'mermaid', base64Code: match[1] }
+        });
+    }
+
+    componentRegex.lastIndex = 0; // Reset
+    while ((match = componentRegex.exec(contentHtml)) !== null) {
+        matches.push({
+            index: match.index,
+            length: match[0].length,
+            node: { type: 'component', name: match[1] }
         });
     }
 
@@ -73,6 +84,11 @@ export default function SandpackRenderer({ contentHtml }: SandpackRendererProps)
                 type: 'mermaid',
                 code: decodedCode
             });
+        } else if (m.node.type === 'component') {
+            parts.push({
+                type: 'component',
+                name: m.node.name
+            });
         }
 
         lastIndex = m.index + m.length;
@@ -107,6 +123,10 @@ export default function SandpackRenderer({ contentHtml }: SandpackRendererProps)
                     return (
                         <MermaidRenderer key={index} code={part.code!} />
                     );
+                } else if (part.type === 'component') {
+                    if (part.name === 'DataStructuresCanvas') {
+                        return <DataStructuresCanvas key={index} />;
+                    }
                 }
                 return null;
             })}

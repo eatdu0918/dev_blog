@@ -61,6 +61,14 @@ export async function parsePostContent(slug: string, fileContents: string): Prom
         return `MERMAID_BLOCK_${index}`;
     });
 
+    const componentBlocks: string[] = [];
+    // Extract component blocks: :::component ComponentName
+    rawContent = rawContent.replace(/:::component\s+([a-zA-Z0-9_]+)/g, (match, componentName) => {
+        const index = componentBlocks.length;
+        componentBlocks.push(componentName.trim());
+        return `COMPONENT_BLOCK_${index}`;
+    });
+
     const processedContent = await unified()
         .use(remarkParse)
         .use(remarkGfm)
@@ -90,6 +98,13 @@ export async function parsePostContent(slug: string, fileContents: string): Prom
         const encodedCode = Buffer.from(code, 'utf-8').toString('base64');
         const placeholder = `<div class="mermaid-placeholder" data-code="${encodedCode}"></div>`;
         contentHtml = contentHtml.replace(`<p>MERMAID_BLOCK_${index}</p>`, placeholder);
+    });
+
+    // Re-inject component blocks
+    componentBlocks.forEach((name, index) => {
+        const placeholder = `<div class="component-placeholder" data-name="${name}"></div>`;
+        contentHtml = contentHtml.replace(`<p>COMPONENT_BLOCK_${index}</p>`, placeholder);
+        contentHtml = contentHtml.replace(`COMPONENT_BLOCK_${index}`, placeholder); // In case it wasn't wrapped in <p>
     });
 
     return {
