@@ -2,7 +2,7 @@
 title: "코드를 쓰는 힘을 넘어, 함께 성장의 가치를 고민하다"
 description: "개별 기능 구현의 완성도를 넘어, 동료와 소통하고 조력하며 팀 전체의 성장을 이끄는 과정에서 얻은 소중한 깨달음을 공유합니다."
 date: "2026-03-11"
-tags: ["Mentorship", "Collaboration", "SoftSkills", "Growth"]
+tags: ["SoftSkills"]
 ---
 
 # 혼자 가는 길과 함께 가는 길
