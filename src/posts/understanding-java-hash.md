@@ -3,7 +3,7 @@ published: true
 title: "Java Hash의 내부 동작 원리: 해시 테이블을 직접 구현하며 깨달은 것들"
 description: "Java의 HashMap과 hashCode()가 내부적으로 어떻게 동작하는지, 그 원리를 파헤치고 TypeScript로 직접 해시 테이블을 구현하며 학습한 과정을 공유합니다."
 date: "2026-03-12"
-tags: ["Java", "Data Structure", "TypeScript"]
+tags: ["Java"]
 ---
 
 # Java Hash의 내부 동작 원리: 해시 테이블을 직접 구현하며 깨달은 것들
