@@ -38,9 +38,8 @@ describe('Ramda.js Functional Patterns', () => {
   it('should demonstrate immutability (원본 보호)', () => {
     const originalScores = users.map(u => u.score);
     
-    // 점수를 10점씩 올리는 연산
-    const boostScores = R.map(R.over(R.lensProp('score'), R.add(10)));
-    const boostedUsers = boostScores(users);
+    // 점수를 10점씩 올리는 연산 (Immutability 확인)
+    const boostedUsers = users.map(u => R.assoc('score', u.score + 10, u));
 
     expect(boostedUsers[0].score).toBe(90);
     expect(users[0].score).toBe(80); // 원본은 변하지 않아야 함
