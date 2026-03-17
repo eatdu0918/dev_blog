@@ -2,7 +2,7 @@
 title: "불변성과의 작별 인사: Ramda Lenses로 데이터 접근의 새로운 지평 열기"
 description: "함수형 프로그래밍의 핵심인 불변성을 유지하면서도 중첩된 객체를 선언적으로 다루는 방법, Ramda.js의 Lenses에 대한 학습 기록을 정리합니다."
 date: "2026-03-17"
-tags: ["FunctionalProgramming", "Ramda.js", "Javascript"]
+tags: ["Ramda.js", "Javascript"]
 ---
 
 # 불변성과의 작별 인사: Ramda Lenses로 데이터 접근의 새로운 지평 열기
