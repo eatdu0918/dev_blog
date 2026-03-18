@@ -1,12 +1,12 @@
 ---
 published: true
-title: "Java의 super와 super(): 상속의 깊은 곳을 연결하는 끈"
+title: "Java 상속의 부모 참조와 생성자 제어: super 및 super()의 역할과 동작 원리"
 description: "상속 관계에서 부모 클래스와 자식 클래스를 잇는 핵심 키워드, super와 super()의 차이점과 동작 원리를 파헤쳐봅니다."
 date: "2026-03-13"
 tags: ["Backend", "OOP"]
 ---
 
-# Java의 super와 super(): 상속의 깊은 곳을 연결하는 끈
+# Java 상속의 부모 참조와 생성자 제어: super 및 super()의 역할과 동작 원리
 
 ![Java super 개념도](/public/images/java-super-reference-and-constructor.png)
 
