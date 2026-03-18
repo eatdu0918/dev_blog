@@ -1,11 +1,11 @@
 ---
-title: "HikariCP 커넥션 풀의 역습: REQUIRES_NEW가 부른 첫 데드락(Deadlock)의 아찔함"
+title: "HikariCP 커넥션 풀 고갈과 데드락 해결: REQUIRES_NEW 트랜잭션 전파 속성의 위험성 분석"
 description: "부모 트랜잭션이 자원 반납을 미루면서 초래한 치명적인 HikariCP 타임아웃 장애. 커넥션 풀 교착 상태를 경험하고 깨달은 회고록입니다."
 date: "2026-02-26"
 tags: ["Java", "Spring", "Database", "Backend", "Troubleshooting"]
 ---
 
-# HikariCP 커넥션 풀의 역습: REQUIRES_NEW가 부른 첫 데드락(Deadlock)의 아찔함
+# HikariCP 커넥션 풀 고갈과 데드락 해결: REQUIRES_NEW 트랜잭션 전파 속성의 위험성 분석
 
 한창 트랜잭션의 개념을 공부하고, 어설프게 `@Transactional(propagation = Propagation.REQUIRES_NEW)`를 알게 되었던 그날. 
 "아! 메인 로직이 실패해도 감사 로그(Audit)는 별개로 남겨야 하니까 여기엔 새로운 트랜잭션을 파서 분리해야겠다!" 라며 무릎을 탁 쳤다. 내 코드의 아키텍처가 꽤 세련돼졌다고 으스대며 배포 스위치를 눌렀다.

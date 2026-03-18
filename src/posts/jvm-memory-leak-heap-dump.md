@@ -1,11 +1,11 @@
 ---
-title: "JVM 메모리 누수 생존기: OOM(OutOfMemory)과 힙 덤프 분석하며 성장하기"
+title: "JVM 메모리 누수 진단과 해결: OutOfMemoryError 원인 파악을 위한 힙 덤프(Heap Dump) 분석 기법"
 description: "서버가 뻗었을 때 재시작으로 도망치길 멈추고, 힙 덤프를 직접 뜯어보며 논리적 메모리 누수를 찾아낸 치열한 생존 기록."
 date: "2026-02-26"
 tags: ["Java", "JVM", "Troubleshooting", "Backend"]
 ---
 
-# JVM 메모리 누수 생존기: OOM(OutOfMemory)과 힙 덤프 분석하며 성장하기
+# JVM 메모리 누수 진단과 해결: OutOfMemoryError 원인 파악을 위한 힙 덤프(Heap Dump) 분석 기법
 
 자바를 주 언어로 사용하면서 내가 누렸던 가장 큰 호사는 '가비지 컬렉터(GC)'의 존재였다. 개발자가 `free()`나 메모리 해제를 직접 신경 쓰지 않아도 뒤에서 쓱싹쓱싹 청소를 해주는 우렁각시 같은 존재. 그래서 나는 "자바는 아무렇게나 짜도 메모리 누수가 없다"는 치기 어린 망상에 젖어있었다.
 

@@ -1,11 +1,11 @@
 ---
-title: "싱글 스레드의 감옥 탈출기: Web Worker와 OMTA 구조로 UI 얼어붙음을 타파하다"
+title: "브라우저 메인 스레드 병목 해결: Web Worker를 활용한 연산 분리와 OMTA 구조 도입 사례"
 description: "메인 스레드를 멈춰버린 무자비한 엑셀 파싱 연산 때문에 좌절하던 어느 날, 백그라운드 Web Worker라는 구원의 빛을 만난 기록."
 date: "2026-02-26"
 tags: ["JavaScript", "Frontend", "Performance", "Web Worker", "Troubleshooting"]
 ---
 
-# 싱글 스레드의 감옥 탈출기: Web Worker와 OMTA 구조로 UI 얼어붙음을 타파하다
+# 브라우저 메인 스레드 병목 해결: Web Worker를 활용한 연산 분리와 OMTA 구조 도입 사례
 
 자바스크립의 특징을 논할 때 가장 먼저 앵무새처럼 되뇌이는 주문. "자바스크립트는 싱글 스레드(Single-Threaded)라서 어쩌고, 비동기 처리가 저쩌고." 이 말을 수십 번 외치고 다녔지만, 내가 진짜 이 ‘싱글 스레드’라는 단어의 공포를 체감한 적이 있었나? 
 

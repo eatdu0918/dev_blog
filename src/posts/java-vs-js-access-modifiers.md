@@ -1,12 +1,12 @@
 ---
 published: true
-title: "Java와 JavaScript의 접근 제어자: 캡슐화의 벽을 넘나들며 느낀 설계의 차이"
+title: "Java와 JavaScript의 접근 제어자 비교: 캡슐화 모델의 차이와 언어별 설계 철학 분석"
 description: "클래스 내부 정보를 보호하는 접근 제어자(Access Modifiers)가 Java와 JavaScript에서 어떻게 다른지, 그리고 그 차이가 개발 경험에 어떤 영향을 주었는지 회고합니다."
 date: "2026-03-11"
 tags: ["Programming", "Java", "JavaScript"]
 ---
 
-# Java와 JavaScript의 접근 제어자: 캡슐화의 벽을 넘나들며 느낀 설계의 차이
+# Java와 JavaScript의 접근 제어자 비교: 캡슐화 모델의 차이와 언어별 설계 철학 분석
 
 ![접근 제어자와 캡슐화 개념도](/public/images/java-vs-js-access-modifiers.png)
 

@@ -1,11 +1,11 @@
 ---
-title: "소셜 로그인 연동의 민낯: Implicit의 추락과 PKCE 방어막을 이해하다"
+title: "OAuth 2.0 보안 강화: Implicit Grant의 취약점과 PKCE(Proof Key for Code Exchange) 도입의 필요성"
 description: "라이브러리에 의존하던 시기를 지나, '왜 굳이 코드를 한 번 더 바꿔야 할까?'라는 호기심 끝에 도달한 OAuth 2.0 보안(PKCE) 학습기."
 date: "2026-02-26"
 tags: ["Security", "OAuth", "Architecture", "Backend"]
 ---
 
-# 소셜 로그인 연동의 민낯: Implicit의 추락과 PKCE 방어막을 이해하다
+# OAuth 2.0 보안 강화: Implicit Grant의 취약점과 PKCE(Proof Key for Code Exchange) 도입의 필요성
 
 지금껏 사내 프로젝트나 사이드 프로젝트에 소셜 로그인(구글, 카카오)을 붙이는 일은 늘 즐거웠다. 'Spring Security OAuth2 Client'나 프론트엔드의 'NextAuth' 같은 무적의 라이브러리 덕분이었다. 제공 스펙대로 대시보드에서 `Client ID`와 `Secret Key`만 복사해다 파일에 붙여 넣으면, 내가 한 거라곤 1도 없는데 알아서 리다이렉트 창이 뜨고 내 손에는 완벽한 구글 이메일 티켓(Access Token)이 쥐어졌다.
 

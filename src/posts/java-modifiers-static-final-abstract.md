@@ -1,12 +1,12 @@
 ---
 published: true
-title: "Java 제어자의 삼총사: static, final, abstract로 설계의 선 긋기"
+title: "Java 제어자 활용 전략: static, final, abstract를 이용한 객체 설계의 제약과 명확성 확보"
 description: "클래스와 멤버의 성격을 규정하는 static, final, abstract 제어자를 통해 더 견고하고 의도가 명확한 코드를 설계하는 방법을 탐구합니다."
 date: "2026-03-13"
 tags: ["Backend"]
 ---
 
-# Java 제어자의 삼총사: static, final, abstract로 설계의 선 긋기
+# Java 제어자 활용 전략: static, final, abstract를 이용한 객체 설계의 제약과 명확성 확보
 
 ![Java 제어자 개념도](/public/images/java-modifiers-static-final-abstract.png)
 
