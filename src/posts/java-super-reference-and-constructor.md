@@ -23,24 +23,24 @@ tags: ["Backend", "OOP"]
 자식 클래스에서 부모와 동일한 이름의 변수나 메서드를 정의(Shadowing or Overriding)했을 때, `this`가 '나'를 가리킨다면 `super`는 명시적으로 '부모'를 가리킨다.
 
 ### 내가 겪었던 문제점
-전투 게임을 만들면서 `Unit` 클래스를 상속받은 `Warrior` 클래스를 구현할 때였다. 부모와 자식 모두 `hp`라는 변수를 가지고 있었는데, 자식 클래스에서 `hp`를 호출하면 자식의 `hp`만 바뀌고 부모의 `hp`는 그대로인 현상이 발생했다. 
+웹 애플리케이션을 개발하면서 공통 `User` 클래스를 상속받은 `AdminUser` 클래스를 구현할 때였다. 권한(role)을 나타내는 멤버 변수가 부모와 자식 모두에게 정의되어 있었는데, 자식 클래스에서 이 변수에 접근하면 자식의 변수만 참조되고 부모의 공통 속성은 가려지는 현상이 발생했다.
 
 ```java
-class Unit {
-    int hp = 100;
+class User {
+    String role = "MEMBER";
 }
 
-class Warrior extends Unit {
-    int hp = 150; // 부모의 hp를 가림(Shadowing)
+class AdminUser extends User {
+    String role = "ADMIN"; // 부모의 role을 가림(Shadowing)
 
-    void showStatus() {
-        System.out.println("나의 HP: " + this.hp);     // 150
-        System.out.println("부모의 HP: " + super.hp); // 100
+    void showRole() {
+        System.out.println("나의 권한: " + this.role);     // ADMIN
+        System.out.println("기본 권한: " + super.role); // MEMBER
     }
 }
 ```
 
-이때 `super.hp`를 통해 부모의 영역에 접근할 수 있다는 것을 알게 되었다. 마치 부모님의 성함을 직접 불러서 필요한 것을 요청하는 것과 같았다.
+이때 `super.role`을 통해 부모의 영역에 접근할 수 있다는 것을 알게 되었다. 마치 부모님의 성함을 직접 불러서 필요한 것을 요청하는 것과 같았다.
 
 ---
 
