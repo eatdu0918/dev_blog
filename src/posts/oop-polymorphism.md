@@ -17,24 +17,24 @@ categories: ['Programming', 'CS', 'OOP']
 
 다형성은 한 가지 타입의 식별자로 여러 형태의 객체를 참조할 수 있는 능력을 말합니다. 프로그래머는 구체적인 클래스가 무엇인지 몰라도, 그 객체가 수행할 '역할'만 알고 있다면 동일한 방식으로 대화할 수 있습니다.
 
-예를 들어, 모든 도형은 `draw()`라는 행위를 할 수 있습니다. 사각형이든 원이든 삼각형이든, 우리는 그저 "그려라"라고 명령할 뿐입니다. 구체적으로 어떻게 그릴지는 각 객체가 스스로 결정합니다.
+예를 들어, 모든 파일 저장소는 `upload()`라는 행위를 할 수 있습니다. AWS S3이든 로컬 서버든 구름 저장소이든, 우리는 그저 "업로드해라"라고 명령할 뿐입니다. 구체적으로 어디에 어떻게 저장할지는 각 객체가 스스로 결정합니다.
 
 ```typescript
-interface Shape {
-  draw(): void;
+interface StorageProvider {
+  upload(filename: string): void;
 }
 
-class Rectangle implements Shape {
-  draw() { console.log("Rect 그리기"); }
+class S3Storage implements StorageProvider {
+  upload(filename: string) { console.log(`${filename}을 S3에 업로드 완료`); }
 }
 
-class Circle implements Shape {
-  draw() { console.log("Circle 그리기"); }
+class LocalStorage implements StorageProvider {
+  upload(filename: string) { console.log(`${filename}을 로컬 서버에 저장 완료`); }
 }
 
 // 다형성의 힘: 구체적인 타입을 몰라도 일괄 처리 가능
-const shapes: Shape[] = [new Rectangle(), new Circle()];
-shapes.forEach(shape => shape.draw());
+const storages: StorageProvider[] = [new S3Storage(), new LocalStorage()];
+storages.forEach(storage => storage.upload("image.png"));
 ```
 
 ## 실전 예제: 결제 시스템의 유연한 확장

@@ -7,7 +7,7 @@ categories: ['Programming', 'CS']
 
 # 다형성과 명시적 시그니처: 예측 가능한 코드의 핵심
 
-초기에는 동적 언어의 유연함이 주는 매력에 푹 빠져 있었습니다. 어떤 객체가 들어올지 정확히 모르더라도 대충 `draw()` 가 있겠거니 하고 실행했는데, 가끔 런타임에 에러가 나면 원인을 찾느라 밤을 지새우기도 했습니다.
+초기에는 동적 언어의 유연함이 주는 매력에 푹 빠져 있었습니다. 어떤 객체가 들어올지 정확히 모르더라도 대충 `send()` 가 있겠거니 하고 실행했는데, 가끔 런타임에 에러가 나면 원인을 찾느라 밤을 지새우기도 했습니다.
 
 그러다 객체 지향의 **다형성(Polymorphism)**과 이를 뒷받침하는 **명시적 시그니처(Explicit Contract)**라는 개념을 접하게 되었습니다. 단순한 문법적 특징을 넘어, 협업과 유지보수의 관점에서 이 개념이 주는 강력한 힘을 실감하며 학습한 내용을 정리해 봅니다.
 
@@ -21,39 +21,41 @@ categories: ['Programming', 'CS']
 
 ![다형성과 명시적 시그니처 개념](/public/images/polymorphism_explicit_contract_concept.png)
 
-위 그림처럼 '도형(Shape)'이라는 추상적인 계약이 있고, 그 아래에 '원(Circle)', '사각형(Square)' 등이 이 계약을 충족하도록 설계되어 있다면, 우리는 이 객체들이 어떤 것이든 상관없이 안심하고 사용할 수 있습니다.
+위 그림처럼 '알림 제공자(NotificationProvider)'라는 추상적인 계약이 있고, 그 아래에 '이메일(Email)', 'SMS' 등이 이 계약을 충족하도록 설계되어 있다면, 우리는 이 객체들이 어떤 것이든 상관없이 안심하고 사용할 수 있습니다.
 
 ---
 
 ## 2. 실전 예제: 약속된 인터페이스로 유연해지기
 
-프로그래밍을 하며 가장 많이 사용하게 되는 '도형 면적 계산' 예제를 통해 이 개념을 녹여보겠습니다.
+프로그래밍을 하며 가장 많이 사용하게 되는 '알림 전송 서비스' 예제를 통해 이 개념을 녹여보겠습니다.
 
 ### 계약(Contract) 정의하기
 
 ```typescript
 // 명시적 시그니처 정의 (인터페이스)
-interface Shape {
-  getArea(): number; // "면적을 구하고 숫자를 반환해야 한다"는 명확한 규정
+interface NotificationProvider {
+  send(message: string): boolean; // "메시지를 보내고 성공 여부를 반환해야 한다"는 명확한 규정
 }
 ```
 
 ### 다양한 구현(Polymorphism)
 
 ```typescript
-class Circle implements Shape {
-  constructor(private radius: number) {}
+class EmailProvider implements NotificationProvider {
+  constructor(private email: string) {}
 
-  getArea(): number {
-    return Math.PI * this.radius ** 2; // 원의 방식대로 면적 계산
+  send(message: string): boolean {
+    console.log(`${this.email} 주소로 이메일 발송: ${message}`);
+    return true; // 이메일 방식대로 발송 처리
   }
 }
 
-class Square implements Shape {
-  constructor(private side: number) { }
+class SmsProvider implements NotificationProvider {
+  constructor(private phoneNumber: string) { }
 
-  getArea(): number {
-    return this.side ** 2; // 사각형의 방식대로 면적 계산
+  send(message: string): boolean {
+    console.log(`${this.phoneNumber} 번호로 SMS 발송: ${message}`);
+    return true; // SMS 방식대로 발송 처리
   }
 }
 ```
@@ -61,14 +63,14 @@ class Square implements Shape {
 ### 다형성 활용하기
 
 ```typescript
-// 클라이언트 코드는 Shape 계약만 알고 있으면 됩니다. 
-// 구체적인 구현(Circle인지 Square인지)에는 관심이 없습니다.
-function calculateTotalArea(shapes: Shape[]): number {
-  return shapes.reduce((acc, shape) => acc + shape.getArea(), 0);
+// 클라이언트 코드는 NotificationProvider 계약만 알고 있으면 됩니다. 
+// 구체적인 구현(Email인지 Sms인지)에는 관심이 없습니다.
+function broadcastMessage(providers: NotificationProvider[], message: string): void {
+  providers.forEach(provider => provider.send(message));
 }
 ```
 
-이렇게 명시적인 계약을 맺어두면, 새로운 '삼각형(Triangle)' 클래스가 추가되더라도 `calculateTotalArea` 함수는 단 한 줄의 코드 수정 없이도 완벽하게 작동합니다.
+이렇게 명시적인 계약을 맺어두면, 새로운 '푸시 알림(PushNotification)' 클래스가 추가되더라도 `broadcastMessage` 함수는 단 한 줄의 코드 수정 없이도 완벽하게 작동합니다.
 
 ---
 

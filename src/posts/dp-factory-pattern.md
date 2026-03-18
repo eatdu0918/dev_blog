@@ -10,7 +10,7 @@ description: "객체를 생성하는 로직을 하위 클래스로 위임하는 
 
 ## 객체의 구체적인 클래스를 팩토리에게 숨기다
 
-어떤 인터페이스에 맞춰서 동작하는 객체가 필요한 것이지, 굳이 그 객체가 어떤 클래스로 만들어져야 하는지를 클라이언트가 알 필요는 없다는 점에 초점을 맞췄습니다. 클라이언트는 단지 "원(Circle) 모양을 그려주는 객체를 만들어줘", 혹은 "정사각형(Square)을 그려주는 객체를 줘"라고 요청하기만 하면 될 뿐이었습니다.
+어떤 인터페이스에 맞춰서 동작하는 객체가 필요한 것이지, 굳이 그 객체가 어떤 클래스로 만들어져야 하는지를 클라이언트가 알 필요는 없다는 점에 초점을 맞췄습니다. 클라이언트는 단지 "구글(Google) 로그인을 처리해 주는 객체를 만들어줘", 혹은 "카카오(Kakao) 로그인을 처리해 주는 객체를 줘"라고 요청하기만 하면 될 뿐이었습니다.
 
 <img src="/images/factory_pattern_concept.png" alt="팩토리 패턴 개념 다이어그램" style="max-width: 100%;" />
 *팩토리 내부에서 적절한 하위 클래스의 인스턴스를 생성해 주는 개념도*
@@ -19,53 +19,51 @@ description: "객체를 생성하는 로직을 하위 클래스로 위임하는 
 
 ## TypeScript로 팩토리 패턴 구현해보기
 
-다양한 도형을 그리는 프로그램이 있다고 가정했습니다. 도형의 종류가 추가되더라도 클라이언트 핵심 로직은 변경되지 않도록 도형 생성의 책임을 팩토리 클래스에 위임했습니다. 
+다양한 소셜 로그인을 제공하는 인증 시스템이 있다고 가정했습니다. 새로운 인증 수단이 추가되더라도 클라이언트 핵심 로직은 변경되지 않도록 인증 객체 생성의 책임을 팩토리 클래스에 위임했습니다. 
 
 ```typescript
 // 공통 인터페이스
-interface Shape {
-  draw(): string;
-  getArea(): number;
+interface AuthService {
+  authenticate(): string;
+  getProviderName(): string;
 }
 
 // 구체적인 클래스 구현
-class Circle implements Shape {
-  constructor(private radius: number) {}
-  draw() { return '원 그리기 완료'; }
-  getArea() { return Math.PI * this.radius * this.radius; }
+class GoogleAuth implements AuthService {
+  authenticate() { return 'Google 계정으로 인증 완료'; }
+  getProviderName() { return 'google'; }
 }
 
-class Square implements Shape {
-  constructor(private side: number) {}
-  draw() { return '정사각형 그리기 완료'; }
-  getArea() { return this.side * this.side; }
+class KakaoAuth implements AuthService {
+  authenticate() { return 'Kakao 계정으로 인증 완료'; }
+  getProviderName() { return 'kakao'; }
 }
 
-// 모양(Shape) 객체를 생성하는 팩토리 클래스 정의
-class ShapeFactory {
+// 인증(Auth) 객체를 생성하는 팩토리 클래스 정의
+class AuthFactory {
   // 어떤 클래스의 인스턴스를 만들지 구체적으로 알 필요 없이 조건만 받아 생성
-  static createShape(type: 'circle' | 'square', params: number[]): Shape {
-    switch (type) {
-      case 'circle':
-        return new Circle(params[0]);  // params[0]을 반지름으로 사용
-      case 'square':
-        return new Square(params[0]);  // params[0]을 한 변의 길이로 사용
+  static createAuthService(provider: 'google' | 'kakao'): AuthService {
+    switch (provider) {
+      case 'google':
+        return new GoogleAuth();
+      case 'kakao':
+        return new KakaoAuth();
       default:
-        throw new Error('지원하지 않는 도형입니다.');
+        throw new Error('지원하지 않는 인증 수단입니다.');
     }
   }
 }
 
 // 클라이언트 코드
-// ShapeFactory에게 필요한 것을 주문하듯이 요청합니다.
-const myCircle = ShapeFactory.createShape('circle', [5]);
-const mySquare = ShapeFactory.createShape('square', [4]);
+// AuthFactory에게 필요한 것을 주문하듯이 요청합니다.
+const googleService = AuthFactory.createAuthService('google');
+const kakaoService = AuthFactory.createAuthService('kakao');
 
-console.log(myCircle.draw(), myCircle.getArea()); // 원 그리기 완료, 78.5398...
-console.log(mySquare.draw(), mySquare.getArea()); // 정사각형 그리기 완료, 16 
+console.log(googleService.authenticate(), googleService.getProviderName()); // Google 인증 완료, google
+console.log(kakaoService.authenticate(), kakaoService.getProviderName()); // Kakao 인증 완료, kakao
 ```
 
-클라이언트가 직접 `new Circle()`이나 `new Square()`를 호출하는 코드의 양을 확연히 줄일 수 있었습니다. 만약 `Triangle`이라는 새로운 도형이 추가된다면, 클라이언트 코드는 손대지 않고 오직 `ShapeFactory` 클래스의 `switch`문에 `case 'triangle'`만 추가해 주면 기능이 자연스럽게 확장되는 구조를 만들 수 있었습니다.
+클라이언트가 직접 `new GoogleAuth()`이나 `new KakaoAuth()`를 호출하는 코드의 양을 확연히 줄일 수 있었습니다. 만약 `Naver`라는 새로운 인증 수단이 추가된다면, 클라이언트 코드는 손대지 않고 오직 `AuthFactory` 클래스의 `switch`문에 `case 'naver'`만 추가해 주면 기능이 자연스럽게 확장되는 구조를 만들 수 있었습니다.
 
 ## 확장성 확보를 통해 느낀 점
 
