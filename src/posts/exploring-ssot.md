@@ -1,5 +1,5 @@
 ---
-title: "데이터 동화 현상을 발견하다: Single Source of Truth(SSoT) 설계 탐색기"
+title: "데이터 불일치 문제의 근본적 해결: Single Source of Truth(SSoT) 원칙과 설계"
 date: "2026-03-12"
 excerpt: "데이터가 여러 곳에서 각각 관리될 때 발생하는 불일치 문제를 해결하기 위한 SSoT(Single Source of Truth) 설계에 대해 학습하고 정리한 기록입니다."
 tags: ["Architecture"]

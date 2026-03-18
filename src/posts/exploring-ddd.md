@@ -1,12 +1,12 @@
 ---
 published: true
-title: "복잡한 도메인을 코드로 풀어내는 첫걸음: 도메인 주도 설계(DDD)와의 조우"
+title: "비즈니스 로직의 응집과 경계 설정: 도메인 주도 설계(DDD)의 핵심 개념 탐색"
 description: "커지는 프로젝트 규모와 얽히는 비즈니스 로직 사이에서 고민하다 발견한 DDD. 직접 적용해보기 전, 검색과 탐색을 통해 이해한 DDD의 핵심 개념들을 정리하고 코드로 모사해보며 느낀 점들을 공유합니다."
 date: "2026-03-12"
 tags: ["Architecture"]
 ---
 
-# 복잡한 도메인을 코드로 풀어내는 첫걸음: 도메인 주도 설계(DDD)와의 조우
+# 비즈니스 로직의 응집과 경계 설정: 도메인 주도 설계(DDD)의 핵심 개념 탐색
 
 ![DDD Architecture Concept](/public/images/ddd-concept.png)
 
