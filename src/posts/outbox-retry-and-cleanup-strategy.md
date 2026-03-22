@@ -2,7 +2,7 @@
 title: "Outbox 패턴의 완성: 실패한 이벤트의 재시도와 생명주기 관리"
 date: "2026-03-16"
 description: "Transactional Outbox 패턴 도입 후, 실제 운영 환경에서 직면한 이벤트 발송 실패 대응과 데이터 정리 전략에 대한 회고입니다."
-tags: ["Design Pattern", "Kafka"]
+tags: ["Architecture", "Kafka", "Design Pattern"]
 ---
 
 이전에 Transactional Outbox 패턴을 도입하여 DB 커밋과 이벤트 발행 사이의 정합성 문제를 해결했지만, 실제 운영 환경에서는 또 다른 숙제가 남아있었습니다. "Kafka 브로커가 잠시 중단되거나 네트워크 순단이 발생했을 때, Outbox 테이블에 쌓인 실패한 메시지들을 어떻게 다시 안전하게 보낼 것인가?" 그리고 "성공적으로 처리된 데이터들은 언제까지 보관해야 하는가?"에 대한 고민이었습니다.

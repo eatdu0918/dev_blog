@@ -2,7 +2,7 @@
 title: "이벤트 루프 심화: Microtask Queue와 Macrotask, 그리고 렌더링 최적화"
 description: "setTimeout과 Promise의 실행 순서, 그리고 브라우저 렌더링(페인팅) 사이에 숨겨진 Event Loop의 가혹한 줄다리기를 분석합니다."
 date: "2026-02-26"
-tags: ["JavaScript", "Frontend", "Event Loop", "Performance"]
+tags: ["Architecture", "JavaScript", "Frontend"]
 ---
 
 # 이벤트 루프 심화: Microtask Queue와 Macrotask, 그리고 렌더링 최적화

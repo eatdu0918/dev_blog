@@ -3,7 +3,7 @@ published: true
 title: "V8 엔진의 소스코드 실행 파이프라인 이해하기: Ignition과 TurboFan"
 description: "자바스크립트 엔진 V8이 소스코드를 해석하여 기계어로 변환하고 최적화하는 내부 과정을 학습한 내용을 정리합니다."
 date: "2026-03-20"
-tags: ["JavaScript", "V8", "CS", "Performance"]
+tags: ["Architecture", "JavaScript", "V8", "CS"]
 ---
 
 # V8 엔진의 소스코드 실행 파이프라인 이해하기: Ignition과 TurboFan

@@ -2,7 +2,7 @@
 title: "Spring AOP의 배신인가 나의 무지인가: @Transactional과 Self-Invocation의 함정"
 description: "같은 클래스 내부에서 @Transactional 메서드를 호출했을 때 왜 롤백이 되지 않는지 뼈저리게 겪고, Spring AOP 프록시의 본질을 파헤친 기록입니다."
 date: "2026-02-26"
-tags: ["Java", "Spring", "AOP", "Backend", "Troubleshooting"]
+tags: ["Architecture", "Java", "Spring", "Backend"]
 ---
 
 # Spring AOP의 배신인가 나의 무지인가: @Transactional과 Self-Invocation의 함정

@@ -3,7 +3,7 @@ published: true
 title: "V8 엔진의 객체 접근 최적화: 히든 클래스와 인라인 캐싱"
 description: "동적 타입 언어인 자바스크립트의 객체 접근 성능을 극대화하는 V8의 핵심 최적화 기법인 Hidden Class와 Inline Caching의 원리를 정리합니다."
 date: "2026-03-22"
-tags: ["JavaScript"]
+tags: ["Architecture", "JavaScript"]
 ---
 
 # V8 엔진의 객체 접근 최적화: 히든 클래스와 인라인 캐싱

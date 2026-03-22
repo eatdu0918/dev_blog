@@ -2,7 +2,7 @@
 published: true
 title: 'MSA(Microservices Architecture) 도입과 학습 회고'
 date: '2026-02-19'
-categories: ['Architecture', 'Backend']
+tags: ["Architecture", "MSA", "Backend"]
 ---
 
 # MSA(Microservices Architecture) 도입과 학습 회고

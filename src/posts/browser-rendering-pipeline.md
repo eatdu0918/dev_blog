@@ -3,7 +3,7 @@ published: true
 title: "브라우저 렌더링 파이프라인: HTML이 픽셀로 변하는 과정"
 description: "브라우저가 HTML, CSS, JavaScript를 해석하여 화면에 실제로 그리는 Critical Rendering Path의 각 단계를 학습한 내용을 정리합니다."
 date: "2026-03-22"
-tags: ["Frontend"]
+tags: ["Architecture", "Frontend"]
 ---
 
 # 브라우저 렌더링 파이프라인: HTML이 픽셀로 변하는 과정

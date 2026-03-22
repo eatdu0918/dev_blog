@@ -3,7 +3,7 @@ published: true
 title: "메모리 관리의 기본 원리: 스택, 힙 그리고 가비지 컬렉션"
 description: "자바스크립트의 자동 메모리 관리 이면에 숨겨진 스택과 힙의 구분, 그리고 가비지 컬렉션의 동작 원리를 학습한 내용을 정리합니다."
 date: "2026-03-20"
-tags: ["CS", "JavaScript", "Performance"]
+tags: ["Architecture", "CS", "JavaScript"]
 ---
 
 # 메모리 관리의 기본 원리: 스택, 힙 그리고 가비지 컬렉션

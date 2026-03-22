@@ -2,7 +2,7 @@
 title: "Spring @Transactional의 함정: 전파 속성과 격리 수준의 실전 이해"
 description: "맹목적인 로직 롤백을 넘어, 개발자가 직접 제어해야 할 트랜잭션의 생명주기와 동시성 이슈(Lost Update) 방어 전략을 다룹니다."
 date: "2026-02-27"
-tags: ["Spring", "Backend"]
+tags: ["Architecture", "Spring", "Backend"]
 ---
 
 # Spring @Transactional의 함정: 전파 속성과 격리 수준의 실전 이해

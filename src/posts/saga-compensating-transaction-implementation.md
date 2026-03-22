@@ -2,7 +2,7 @@
 title: "Saga 패턴의 마침표: 보상 트랜잭션으로 구현하는 일관성 복구"
 date: "2026-03-16"
 description: "분산 시스템에서 주문이 취소되었을 때, 여러 서비스에 걸친 데이터들을 어떻게 원래대로 되돌리는지 보상 트랜잭션 설계 과정을 공유합니다."
-tags: ["Design Pattern", "Kafka"]
+tags: ["Architecture", "Kafka", "Design Pattern"]
 ---
 
 MSA 환경에서 여러 서비스가 협력하여 하나의 비즈니스를 처리할 때, 가장 무서운 순간은 '중간에 에러가 났을 때'입니다. 단일 DB라면 `@Transactional` 하나로 모든 것을 롤백할 수 있지만, 물리적으로 떨어진 서비스들 사이에서는 이미 커밋된 데이터를 '반대 연산'을 통해 수동으로 복구해야 합니다. 이를 **보상 트랜잭션(Compensating Transaction)**이라고 합니다.
