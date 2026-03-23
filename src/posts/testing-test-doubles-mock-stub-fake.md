@@ -39,6 +39,97 @@ tags: ["Testing"]
 
 ---
 
+## 3. 실전 예제: 상황별 테스트 더블 구현
+
+단순한 이론을 넘어, 실제로 인터페이스를 대행하는 세 가지 주요 테스트 더블을 코드로 구현하며 그 차이를 확인해 보았습니다.
+
+### 샌드박스: 사용자 저장소 인터페이스의 다양한 대역들
+
+```typescript
+/**
+ * 테스트 더블(Test Double)의 다양한 형태를 시뮬레이션하기 위한 코드입니다.
+ */
+
+export interface UserRepository {
+    findById(id: number): { id: number; name: string } | null;
+    save(user: { id: number; name: string }): void;
+}
+
+// 1. Stub (스텁): 정해진 답변만 하는 단순 대역
+export class UserRepoStub implements UserRepository {
+    findById(id: number) {
+        return { id: 1, name: "Stub User" };
+    }
+    save(user: any) {}
+}
+
+// 2. Fake (페이크): 실제 DB 대신 메모리를 사용하는 경량 대역
+export class UserRepoFake implements UserRepository {
+    private users = new Map<number, { id: number; name: string }>();
+    findById(id: number) {
+        return this.users.get(id) || null;
+    }
+    save(user: { id: number; name: string }) {
+        this.users.set(user.id, user);
+    }
+}
+
+// 3. Mock (모크): 호출 기록을 남겨 '행위'를 감시하는 대역
+export class UserRepoMock implements UserRepository {
+    public saveCalledCount = 0;
+    public lastSavedUser: any = null;
+
+    findById(id: number) { return null; }
+    save(user: { id: number; name: string }) {
+        this.saveCalledCount++;
+        this.lastSavedUser = user;
+    }
+}
+```
+
+---
+
+## 4. 유형별 동작 검증 테스트
+
+`Vitest`를 활용해 각 대용 객체들이 의도한 테스트 목적에 맞게 작동하는지 검증을 수행했습니다. 각 테스트 케이스가 스텁의 반환값, 페이크의 상태, 모크의 호출 횟수 중 무엇을 확인하고 있는지 비교해 보는 과정이 큰 도움이 되었습니다.
+
+### 테스트 케이스: 스텁, 페이크, 모크의 검증 방식 비교
+
+```typescript
+import { describe, it, expect } from 'vitest';
+import { UserService, UserRepoStub, UserRepoFake, UserRepoMock } from '../src/examples/test-double-example';
+
+describe('테스트 더블(Test Double) 유형별 동작 검증', () => {
+
+    it('Stub: 메서드가 정해진 값을 반환하여 서비스의 로직을 고립시킴', () => {
+        const stubRepo = new UserRepoStub();
+        const service = new UserService(stubRepo);
+        
+        expect(service.getUserName(1)).toBe("Stub User");
+    });
+
+    it('Fake: 메모리 기반 저장소로 실제 상태 변화를 검증함', () => {
+        const fakeRepo = new UserRepoFake();
+        const service = new UserService(fakeRepo);
+        
+        service.createNewUser(10, 'Fake User');
+        expect(service.getUserName(10)).toBe("Fake User");
+    });
+
+    it('Mock: save()가 정확히 1번 호출되었는지 행위를 검증함', () => {
+        const mockRepo = new UserRepoMock();
+        const service = new UserService(mockRepo);
+        
+        service.createNewUser(99, 'Mock User');
+        
+        expect(mockRepo.saveCalledCount).toBe(1);
+        expect(mockRepo.lastSavedUser.name).toBe('Mock User');
+    });
+});
+```
+
+---
+
 ## 💡 마치며: 외부를 격리하고 본연의 로직에 집중하기
 
 테스트 더블을 학습하며 느낀 점은, "테스트가 어려우면 설계가 잘못된 것일 수도 있다"는 경고의 메시지였습니다. 외부 의존성이 너무 많아 대역 배우들이 수십 명씩 동원되어야 하는 테스트라면, 객체 간의 결합도가 너무 높지는 않은지 되돌아봐야 함을 알게 되었습니다. 
