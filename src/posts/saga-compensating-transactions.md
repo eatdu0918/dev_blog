@@ -3,7 +3,7 @@ published: true
 title: "분산 트랜잭션의 미학: Saga 패턴과 보상 트랜잭션으로 데이터 정합성 유지하기"
 description: "로컬 트랜잭션을 넘어서 여러 서비스에 걸친 비즈니스 워크플로우의 정합성을 어떻게 안전하게 관리할지, Saga 패턴의 핵심 원리를 파헤쳐 보았습니다."
 date: "2026-04-07"
-tags: ["DistributedTransaction", "SagaPattern", "MSA", "Compensation"]
+tags: ["Architecture"]
 ---
 
 # 분산 트랜잭션의 미학: Saga 패턴과 보상 트랜잭션으로 데이터 정합성 유지하기
