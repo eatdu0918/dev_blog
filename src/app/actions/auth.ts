@@ -13,7 +13,7 @@ export async function login(prevState: any, formData: FormData) {
     return { error: '서버 설정 오류: 관리자 비밀번호가 설정되지 않았습니다.' }
   }
 
-  if (password === correctPassword) {
+  if (password?.toString().trim() === correctPassword?.trim()) {
     const cookieStore = await cookies()
     cookieStore.set('auth_session', 'authenticated', {
       httpOnly: true,
