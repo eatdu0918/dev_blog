@@ -7,8 +7,9 @@ export function middleware(request: NextRequest) {
   // /qna 경로로 시작하는 요청에 대해서만 인증을 체크합니다.
   if (pathname.startsWith('/qna')) {
     const authCookie = request.cookies.get('auth_session')
+    const isAuthenticated = authCookie?.value === 'authenticated'
 
-    if (!authCookie || authCookie.value !== 'authenticated') {
+    if (!isAuthenticated) {
       // 비밀번호가 없으면 로그인 페이지로 리다이렉트
       const loginUrl = new URL('/login', request.url)
       loginUrl.searchParams.set('from', pathname) // 로그인 성공 후 돌아올 경로 저장

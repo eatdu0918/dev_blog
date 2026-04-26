@@ -8,6 +8,14 @@ export async function login(prevState: any, formData: FormData) {
   const redirectTo = (formData.get('redirectTo') as string) || '/'
   const correctPassword = process.env.ADMIN_PASSWORD
 
+  // 디버깅을 위한 로그 (비밀번호 원문은 노출하지 않음)
+  console.log('Login attempt:', {
+    hasPasswordInput: !!password,
+    hasCorrectPasswordEnv: !!correctPassword,
+    envLength: correctPassword?.length,
+    match: password?.toString().trim() === correctPassword?.trim()
+  })
+
   if (!correctPassword) {
     console.error('ADMIN_PASSWORD is not set in environment variables')
     return { error: '서버 설정 오류: 관리자 비밀번호가 설정되지 않았습니다.' }
@@ -20,7 +28,7 @@ export async function login(prevState: any, formData: FormData) {
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       path: '/',
-      maxAge: 60 * 60 * 24 * 7 // 1주간 유지
+      maxAge: 60 * 60 * 24 * 7, // 1주간 유지
     })
     
     // Redirect must be called outside try/catch
