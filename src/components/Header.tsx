@@ -8,8 +8,12 @@ export default function Header() {
                 <Link href="/" className="text-2xl font-bold tracking-tighter hover:underline">
                     My Dev Blog
                 </Link>
-                <div className="flex items-center gap-4">
-                    <span className="text-zinc-500 text-sm hidden sm:inline-block">Next.js & Markdown</span>
+                <div className="flex items-center gap-6">
+                    <nav className="flex items-center gap-4 text-sm font-medium text-zinc-600 dark:text-zinc-400">
+                        <Link href="/qna" className="hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">
+                            Interview Q&A
+                        </Link>
+                    </nav>
                     <ThemeToggle />
                 </div>
             </div>

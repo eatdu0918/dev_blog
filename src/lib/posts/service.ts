@@ -2,22 +2,27 @@ import { getPostSlugs, getPostFileContent } from './repository';
 import { parsePostMetadata, parsePostContent } from './parser';
 import { PostMetadata, PostContent } from './types';
 
-export function getAllPosts(category?: string): PostMetadata[] {
+export function getAllPosts(category?: string, includeQna: boolean = false): PostMetadata[] {
     const slugs = getPostSlugs();
     const allPostsData = slugs.map((slug) => {
         const fileContents = getPostFileContent(slug.replace(/\.md$/, ''));
         return parsePostMetadata(slug, fileContents);
     });
 
-    // Filter by published status (show all in development, default to true in production unless explicitly false)
-    const publishedPosts = process.env.NODE_ENV === 'development'
+    // Filter by published status
+    let filteredPosts = process.env.NODE_ENV === 'development'
         ? allPostsData
         : allPostsData.filter((post) => post.published !== false);
 
     // Filter by category if provided
-    const filteredPosts = category
-        ? publishedPosts.filter((post) => post.categories?.includes(category))
-        : publishedPosts;
+    if (category) {
+        filteredPosts = filteredPosts.filter((post) => post.categories?.includes(category));
+    }
+
+    // By default, exclude 'qna' type posts from the main feed
+    if (!includeQna) {
+        filteredPosts = filteredPosts.filter((post) => post.type !== 'qna');
+    }
 
     // Sort posts by date
     return filteredPosts.sort((a, b) => {
@@ -27,6 +32,23 @@ export function getAllPosts(category?: string): PostMetadata[] {
             return -1;
         }
     });
+}
+
+export async function getAllQnaPosts(): Promise<PostContent[]> {
+    const slugs = getPostSlugs();
+    
+    const allPostsData = await Promise.all(slugs.map(async (slug) => {
+        const fileContents = getPostFileContent(slug.replace(/\.md$/, ''));
+        const metadata = parsePostMetadata(slug, fileContents);
+        if (metadata.type === 'qna' && (process.env.NODE_ENV === 'development' || metadata.published !== false)) {
+             return await parsePostContent(slug, fileContents);
+        }
+        return null;
+    }));
+
+    const qnaPosts = allPostsData.filter((post): post is PostContent => post !== null);
+    
+    return qnaPosts.sort((a, b) => (a.date < b.date ? 1 : -1));
 }
 
 export function getAllCategories(): string[] {
@@ -39,7 +61,7 @@ export function getAllCategories(): string[] {
 }
 
 export function getAllPostIds() {
-    const posts = getAllPosts();
+    const posts = getAllPosts(undefined, true);
     return posts.map((post) => {
         return {
             params: {

@@ -13,7 +13,7 @@ export function parsePostMetadata(slug: string, fileContents: string): PostMetad
 
     return {
         id,
-        ...(matterResult.data as { date: string; title: string; published?: boolean }),
+        ...(matterResult.data as { date: string; title: string; published?: boolean; type?: 'post' | 'qna'; level?: string; categories?: string[] }),
     };
 }
 
@@ -110,6 +110,6 @@ export async function parsePostContent(slug: string, fileContents: string): Prom
     return {
         id,
         contentHtml,
-        ...(matterResult.data as { date: string; title: string; published?: boolean }),
+        ...(matterResult.data as { date: string; title: string; published?: boolean; type?: 'post' | 'qna'; level?: string; categories?: string[] }),
     };
 }

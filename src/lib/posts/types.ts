@@ -4,6 +4,8 @@ export interface PostMetadata {
     title: string;
     categories?: string[];
     published?: boolean;
+    type?: 'post' | 'qna';
+    level?: 'junior' | 'mid' | 'senior' | string;
     [key: string]: unknown;
 }
 
