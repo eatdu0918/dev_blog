@@ -7,96 +7,134 @@ date: '2026-04-27'
 categories: ['Frontend', 'Performance', 'Web']
 ---
 
-## 핵심 요약
+## Q1. Web Vitals 핵심 3지표를 설명해 주세요.
 
-Google이 정의한 **사용자 체감 성능 3가지 핵심 지표**(2024년부터 FID → INP로 교체):
+**A.** Google이 정의한 **사용자 체감 성능 지표**입니다(2024년부터 FID → INP).
 
 - **LCP(Largest Contentful Paint)**: 가장 큰 콘텐츠가 보이기까지. 좋음 ≤ 2.5s.
 - **INP(Interaction to Next Paint)**: 상호작용 응답성. 좋음 ≤ 200ms.
 - **CLS(Cumulative Layout Shift)**: 누적 레이아웃 이동. 좋음 ≤ 0.1.
 
-면접에서 "성능 개선 경험" 질문에 이 지표들을 인용하면 신뢰도 ↑.
+각각 **로딩 / 응답성 / 시각적 안정성**을 본다고 보면 됩니다.
 
-## LCP — 로딩 속도
+---
 
-페이지 뷰포트에서 가장 큰 이미지/텍스트 블록이 그려진 시점.
+## Q2. LCP가 안 좋은 페이지를 어떻게 진단하시나요?
 
-### 개선
-- **이미지 최적화**: WebP/AVIF, 적절한 사이즈, `loading=eager`(LCP 후보), `fetchpriority="high"`.
-- **CDN + 캐싱**: 정적 자산을 사용자 근처에서.
-- **서버 응답 시간(TTFB)**: 캐시, edge SSR.
-- **렌더 차단 리소스 제거**: CSS는 critical만 인라인, JS는 `defer`/`async`.
+**A.** Chrome DevTools Performance 탭에서 **LCP 요소 식별 → 네트워크 폭포 → 병목 추적** 순.
+
+체크 포인트:
+- **TTFB**: 서버 응답이 느린가?
+- **렌더 차단 리소스**: CSS/JS가 LCP를 늦추는가?
+- **이미지 로딩**: 가장 큰 이미지가 lazy로 잡혀 있진 않은가?
+- **폰트**: FOIT(보이지 않는 텍스트)으로 LCP가 미뤄지진 않는가?
+
+원인이 보이면 그에 맞는 개선책으로 갑니다.
+
+---
+
+## Q3. LCP는 어떻게 개선하시나요?
+
+**A.** 6가지 도구가 자주 쓰입니다.
+
+- **이미지 최적화**: WebP/AVIF, 적절한 사이즈, `fetchpriority="high"`.
+- **CDN + 캐싱**: 사용자 근처에서 응답.
+- **서버 응답 시간 단축**: 캐시, edge SSR.
+- **렌더 차단 리소스 제거**: critical CSS만 인라인, JS는 `defer`/`async`.
 - **폰트**: `font-display: swap` + preload.
-- **Preload + Preconnect**: 핵심 리소스 미리 연결.
+- **Preload/Preconnect**: 핵심 리소스 사전 연결.
 
-## INP — 응답성 (FID 대체)
+LCP 후보 이미지에 `loading="eager" fetchpriority="high"`만 줘도 큰 차이가 납니다.
 
-페이지 전체 수명에서 사용자 상호작용 후 다음 페인트까지의 **최악 지연**(거의 최악 percentile).
+---
 
-### 개선
-- **무거운 JS 분할**: 코드 스플리팅, dynamic import.
-- **메인 스레드 차단 줄이기**: long task(>50ms) 감지 + 분할.
-- **`scheduler.yield()`**, `requestIdleCallback`로 작업 양보.
-- **React**: `useTransition`, `useDeferredValue`로 우선순위 분리.
-- **이벤트 핸들러 최적화**: 디바운스/스로틀.
-- **워커 활용**: 무거운 계산은 Web Worker로 오프로드.
+## Q4. INP는 정확히 어떻게 측정되나요?
 
-## CLS — 시각적 안정성
+**A.** **페이지 전체 수명에서 사용자 상호작용 후 다음 페인트까지의 거의 최악 지연**입니다.
 
-페이지 로드 중 예기치 않은 레이아웃 이동의 누적.
+- 키보드/마우스/터치 입력 → 다음 paint까지의 시간.
+- 한 페이지 동안 측정된 인터랙션의 거의 최악(98 percentile 비슷).
+- **한 번의 느린 인터랙션이 점수를 망칠 수 있음** — tail latency 관점.
 
-### 개선
-- **이미지/iframe에 width/height 명시** 또는 `aspect-ratio`.
-- **광고/임베드 슬롯 사전 예약**.
-- **폰트 fallback의 metric 일치**(`size-adjust`, `ascent-override`).
-- **동적 콘텐츠 삽입은 사용자 액션 후**.
+FID(첫 입력 지연)와 달리 INP는 페이지 전체 수명을 봅니다. 더 정확한 사용자 경험 지표입니다.
+
+---
+
+## Q5. INP가 갑자기 나빠졌다면 어떻게 진단하시나요?
+
+**A.** **새 배포에서 메인 스레드를 막는 코드**가 들어갔을 가능성이 큽니다.
+
+체크:
+- **무거운 컴포넌트 동기 렌더링**: 큰 리스트, 무거운 차트.
+- **큰 third-party 스크립트**: 광고/분석.
+- **이벤트 핸들러 안의 무거운 작업**.
+- **long task**: 50ms 넘는 메인 스레드 점유 추적.
+
+Chrome DevTools Performance로 long task 위치 확인 + 어떤 함수가 시간을 잡는지 식별합니다.
+
+---
+
+## Q6. INP를 개선하는 도구는 무엇이 있나요?
+
+**A.** 5가지가 핵심입니다.
+
+- **코드 스플리팅 + dynamic import**: 무거운 JS 분할.
+- **`scheduler.yield()` / `requestIdleCallback`**: 메인 스레드 양보.
+- **React `useTransition` / `useDeferredValue`**: 렌더링 우선순위 분리.
+- **이벤트 핸들러 최적화**: debounce/throttle.
+- **Web Worker**: 무거운 계산을 별도 스레드로.
+
+핵심 사고: **인터랙션 후 16ms 안에 다음 paint가 가능해야 한다**.
+
+---
+
+## Q7. CLS는 어떻게 개선하시나요?
+
+**A.** **이동 가능한 모든 요소에 공간을 미리 예약**하는 게 핵심입니다.
+
+- **이미지/iframe에 width/height** 또는 `aspect-ratio`.
+- **광고/임베드 슬롯** 사전 예약(min-height).
+- **폰트 fallback metric 일치**: `size-adjust`, `ascent-override`로 폰트 교체 시 레이아웃 이동 최소화.
+- **동적 콘텐츠 삽입은 사용자 액션 후**(쿠키 동의 배너 등을 무작정 위에 띄우면 CLS 폭증).
 - **스켈레톤 로더**로 공간 확보.
 
-## 측정 도구
+사용자 입력 직후 500ms 이내의 변화는 의도된 것으로 봐서 CLS에서 제외됩니다.
 
-- **Chrome DevTools Performance / Lighthouse**: 개발 환경 측정.
-- **PageSpeed Insights**: 실험실 + 실사용자 데이터.
-- **Web Vitals JS 라이브러리**: 운영 RUM 수집.
-  ```javascript
-  import { onLCP, onINP, onCLS } from 'web-vitals';
-  onLCP(metric => sendToAnalytics(metric));
-  ```
-- **Chrome User Experience Report(CrUX)**: 실 사용자 데이터.
+---
 
-## 실험실 vs 실사용자
+## Q8. Lab 측정과 Field 측정은 어떻게 다른가요?
 
-- **Lab**: 통제 환경, 재현 가능. 빠른 디버깅.
-- **Field(RUM)**: 실 사용자, 다양한 디바이스/네트워크. **랭킹 평가 기준**.
+**A.**
+- **Lab**(Lighthouse, DevTools): 통제 환경, 재현 가능. 빠른 디버깅에 적합.
+- **Field/RUM**(Web Vitals JS, CrUX): 실 사용자, 다양한 디바이스/네트워크. **Google 검색 랭킹 평가 기준**.
 
-두 결과가 다를 수 있음. 실 사용자 데이터로 우선순위 판단.
+```javascript
+import { onLCP, onINP, onCLS } from 'web-vitals';
+onLCP(metric => sendToAnalytics(metric));
+```
 
-## 그 외 보조 지표
+두 결과가 다를 수 있습니다. **실 사용자 데이터로 우선순위 판단**, lab 데이터로 디버깅하는 분업이 정석입니다.
 
-- **TTFB(Time to First Byte)**: 서버 응답 속도.
-- **FCP(First Contentful Paint)**: 첫 콘텐츠.
-- **TTI(Time to Interactive)**: 거의 안 씀.
-- **TBT(Total Blocking Time)**: long task 누적. INP의 lab 대용.
+---
 
-## 프레임워크별 팁
+## Q9. 보조 지표(TTFB, FCP, TBT)는 언제 보시나요?
 
-### React/Next.js
-- `next/image`: 자동 최적화 + lazy.
-- `next/font`: CLS 자동 처리.
-- App Router의 RSC: 클라이언트 번들 축소 → INP 개선.
-- 동적 import + `loading.tsx`로 점진 렌더.
+**A.** 핵심 3지표가 안 좋을 때 **원인 추적용**입니다.
 
-### Vue/Nuxt
-- `<NuxtImg>`, `<NuxtPicture>`.
-- 라우트 기반 자동 코드 스플리팅.
+- **TTFB(Time to First Byte)**: 서버 응답 속도. LCP가 안 좋으면 가장 먼저 점검.
+- **FCP(First Contentful Paint)**: 첫 콘텐츠. LCP보다 빠르고 진짜 사용자 체감과는 약간 차이.
+- **TBT(Total Blocking Time)**: long task 누적. **INP의 lab 대용**으로 자주 사용.
+- **TTI(Time to Interactive)**: 거의 안 씀. INP로 대체됨.
 
-## 자주 헷갈리는 디테일
+---
 
-- LCP 후보는 동적으로 바뀜. preload는 가장 큰 후보에만.
-- INP는 페이지 전체 수명 — 한 번의 느린 인터랙션이 점수 망침. tail latency 관점.
-- CLS는 사용자 입력 직후 500ms 이내의 변화는 제외(의도된 변화로 봄).
+## Q10. third-party 스크립트가 성능을 망치면 어떻게 하나요?
 
-## 면접 follow-up
+**A.** 4가지 전략이 있습니다.
 
-- "LCP가 안 좋은 페이지를 어떻게 진단?" → DevTools에서 LCP 요소 식별 → 네트워크 폭포 → preload/CDN/이미지 최적화 순.
-- "INP가 갑자기 나빠졌다면?" → 새 배포에서 무거운 컴포넌트 동기 렌더, 큰 third-party 스크립트 의심. long task 추적.
-- "third-party 스크립트(GA, 광고)가 성능을 망친다면?" → `defer`, `iframe + lazy`, 자체 호스팅, 사용자 액션 이후 로드.
+1. **`defer` 또는 `async`**: HTML 파싱을 막지 않게.
+2. **iframe + lazy load**: 별도 스레드 격리 + 보일 때만 로드.
+3. **자체 호스팅**: GA, 광고 스크립트를 같은 도메인에서 제공.
+4. **사용자 액션 이후 로드**: 쿠키 동의 후 또는 첫 인터랙션 후.
+
+Partytown 같은 라이브러리는 third-party 스크립트를 web worker로 옮겨 메인 스레드를 보호합니다.

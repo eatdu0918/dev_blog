@@ -7,61 +7,127 @@ date: '2026-04-26'
 categories: ['Troubleshooting', 'Performance', 'JVM']
 ---
 
-## 핵심 요약
+## Q1. 메모리 누수가 의심되면 가장 먼저 무엇을 확인하시나요?
 
-증상부터 정의하고, **메트릭 → 힙덤프 → 코드** 순으로 좁혀 들어갑니다. 단순 GC 압박과 진짜 누수를 구분하는 게 첫 단계입니다.
+**A.** **진짜 누수인지 GC 압박인지 구분**합니다. 같은 증상처럼 보여도 셋은 다릅니다.
 
-## 1. 진짜 누수인지부터 가린다
+- **GC 압박**: 트래픽 대비 힙이 작거나 GC 알고리즘이 안 맞음. 힙은 줄어들지만 GC가 자주 뜸.
+- **점진적 누수**: Old Gen이 계속 증가. Full GC를 돌려도 회수 거의 없음. 결국 OOM.
+- **순간 폭발**: 특정 요청이 큰 객체를 만듦. 누수가 아니라 single-request issue.
 
-같은 증상처럼 보이지만 다음 셋은 다릅니다.
+**Old Gen 사용량 추이**를 며칠 보면 답이 거의 나옵니다. 단조 증가면 누수, 톱니파면 정상.
 
-- **GC 압박**: 트래픽 대비 힙이 작거나, GC 알고리즘이 워크로드와 안 맞음. 힙은 줄어들지만 자주 GC가 뜸.
-- **점진적 누수**: 시간에 비례해 Old Gen이 계속 증가. Full GC를 돌려도 회수가 거의 없음. 결국 OOM.
-- **순간 폭발**: 특정 요청이 큰 객체를 만들어 순간적으로 OOM. 누수가 아니라 single-request memory issue.
+---
 
-JVM이라면 **Old Gen 사용량 추이**를 며칠 동안 보면 답이 거의 나옵니다. 단조 증가면 누수, 톱니파면 정상에 가깝습니다.
+## Q2. 메트릭으로 누수를 좁히는 순서가 어떻게 되나요?
 
-## 2. 메트릭으로 좁히기
+**A.** 5가지를 차례로 봅니다.
 
-저는 보통 다음 순서로 봅니다.
+1. **Heap used / committed**: 추세.
+2. **GC pause / frequency**: 빈번해졌는지.
+3. **스레드 수**: ThreadLocal/ExecutorService 누수의 흔한 신호.
+4. **DB 커넥션 수**: 열고 안 닫는 코드.
+5. **Class 로딩 수**: 무한 증가면 ClassLoader 누수.
 
-- **Heap used / committed**: 트렌드.
-- **GC pause / frequency**: 빈번해졌는지.
-- **스레드 수**: ThreadLocal 누수, ExecutorService 누수의 흔한 신호.
-- **DB 커넥션 수**: 열고 안 닫는 코드 추적.
-- **Class 로딩 수**: 무한히 늘어나면 ClassLoader 누수(특히 핫 리로드 환경).
+여기서 가설이 좁혀지면 힙덤프로 넘어갑니다.
 
-여기서 가설이 어느 정도 좁아지면 힙덤프로 넘어갑니다.
+---
 
-## 3. 힙덤프 분석
+## Q3. 힙덤프는 어떻게 뜨고 분석하나요?
 
-운영에서 힙덤프를 뜨려면 두 가지 방식이 있습니다.
+**A.** 운영에서는 두 가지 방법.
 
-- **OOM 직전 자동 덤프**: `-XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=...` 설정.
-- **수동 덤프**: `jcmd <pid> GC.heap_dump <path>` 또는 `jmap -dump:live`. live 옵션은 GC를 트리거하므로 일시적 stall 주의.
+- **OOM 직전 자동**: `-XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=...`.
+- **수동**: `jcmd <pid> GC.heap_dump <path>` 또는 `jmap -dump:live` (live는 GC 트리거되므로 stall 주의).
 
-뜬 힙덤프는 **Eclipse MAT**으로 보는 게 가장 무난합니다. 핵심은 **Dominator Tree**와 **Leak Suspects Report**입니다.
+분석 도구: **Eclipse MAT**.
+- **Dominator Tree**: 가장 큰 retained heap 객체.
+- **Leak Suspects Report**: 자동 의심 후보 추출.
+- **GC root path**: 왜 회수 안 되는지 추적.
 
-- 가장 큰 retained heap을 차지하는 객체가 누수 후보.
-- 그 객체의 **GC root path**를 따라가면 "왜 회수 안 되는지"가 보입니다.
-- 흔한 누수 패턴: 정적 컬렉션, 캐시(eviction 정책 없음), ThreadLocal, 리스너 미해제, ClassLoader 참조.
+---
 
-## 4. 자주 만나는 패턴 사례
+## Q4. 흔한 메모리 누수 패턴은 어떤 게 있나요?
 
-- **ThreadLocal 누수**: 스레드 풀에서 ThreadLocal에 큰 객체를 넣고 `remove()`를 안 하면 스레드가 살아 있는 한 회수되지 않습니다. Spring의 `@Async`/Tomcat 워커에서 자주 발생.
-- **Closure 누수(JS)**: 클로저가 큰 DOM 노드나 큰 객체를 캡쳐해 GC가 못 회수. Chrome DevTools의 Memory 패널에서 detached DOM 검색.
-- **LRU 없는 캐시**: `ConcurrentHashMap`을 캐시로 쓰는데 eviction이 없으면 시간이 갈수록 폭발. Caffeine 같은 라이브러리로 교체.
-- **HikariCP 커넥션 누수**: `leakDetectionThreshold` 설정 + 트랜잭션 경계 점검. 보통 try-with-resources 누락 또는 비동기 흐름에서 close 누락.
+**A.** 4가지가 자주 보입니다.
 
-## 5. 사후 조치
+1. **ThreadLocal 미정리**: 스레드 풀 환경에서 `remove()` 안 하면 스레드 살아있는 한 회수 X.
+2. **eviction 없는 캐시**: `ConcurrentHashMap` 캐시가 무한 증가. **Caffeine** 같은 라이브러리로 교체.
+3. **이벤트 리스너 미해제**: 등록만 하고 unregister 안 함.
+4. **HikariCP 커넥션 누수**: `leakDetectionThreshold` 설정 + 트랜잭션 경계 점검.
 
-- 단순히 힙을 늘려 시간을 버는 건 임시방편. 재발 방지를 위한 게이트가 필요합니다.
-- **회귀 방지 테스트**: 누수 객체를 명시적으로 생성/회수하는 시나리오를 단위/부하 테스트로 추가.
-- **모니터링 알람 강화**: Old Gen 사용량 임계 + 증가 추세 알람.
-- **포스트모템 작성**: 무엇이, 왜, 어떻게 발견되었는지를 팀 위키에 남겨 같은 장애를 반복하지 않게.
+---
 
-## 면접 follow-up
+## Q5. ThreadLocal 누수를 어떻게 진단하시나요?
 
-- "Node.js라면 어떻게 하시겠어요?" → `--inspect`로 Chrome DevTools 연결, heap snapshot 비교(`Comparison` 뷰)로 증가 객체 추적. 또는 clinic.js doctor.
-- "운영에 영향 안 주고 진단할 수 있나요?" → APM(Datadog, Pinpoint, Scouter)으로 거의 무중단 관찰 가능. 힙덤프는 stall이 있으니 트래픽 적은 시간대.
-- "GC 알고리즘 변경을 고려하나요?" → JDK 17+이면 G1 디폴트, 큰 힙(수십 GB)이면 ZGC/Shenandoah로 pause를 잡을 수 있습니다.
+**A.** **스레드별 retained heap을 추적**합니다.
+
+스레드 풀(Tomcat, `@Async`)에서:
+- 스레드가 풀에 반납되어도 ThreadLocal 값은 유지.
+- 다음 요청에서 해당 스레드가 재사용되면 값이 남아 있음 → 누수 + 데이터 혼선.
+
+해결:
+- **try-finally로 `ThreadLocal.remove()` 보장**.
+- 프레임워크 제공 컨텍스트(`MDC`, Spring `RequestContextHolder`) 사용 시 cleanup이 자동인지 확인.
+
+---
+
+## Q6. JavaScript/Node.js에서 메모리 누수는 어떻게 진단하나요?
+
+**A.** **Chrome DevTools Memory 패널**이 정공법입니다.
+
+1. `node --inspect`로 디버거 연결.
+2. **Heap snapshot 비교**: 일정 시간 간격으로 두 번, "Comparison" 뷰로 증가 객체 확인.
+3. retainer 추적: 어떤 클로저/객체가 잡고 있는지.
+
+브라우저는 **detached DOM** 검색이 효과적(이벤트 리스너 + DOM 참조 클로저). `clinic.js doctor`도 Node.js에 좋은 도구입니다.
+
+---
+
+## Q7. 단순히 힙을 늘리는 건 왜 임시방편인가요?
+
+**A.** 누수는 **시간이 지나면 어떤 크기든 채웁니다**.
+
+힙 4GB가 8GB로 가도:
+- 누수 속도가 느려질 뿐 결국 OOM.
+- 다음번에는 16GB로? 비현실적.
+- GC pause는 힙이 클수록 더 길어짐.
+
+근본 해결은 **누수 코드 수정 + 회귀 방지 테스트 + 모니터링 알람 강화**입니다.
+
+---
+
+## Q8. 운영에 영향 없이 진단하는 방법이 있나요?
+
+**A.** 가능합니다.
+
+- **APM**(Datadog, Pinpoint, Scouter, NewRelic): 거의 무중단 관찰. 힙 사용량, GC, 스레드 추세.
+- **JFR(Java Flight Recorder)**: 낮은 오버헤드(<2%)로 운영 중 프로파일링.
+- **`jstat`**: 가벼운 GC 통계.
+
+힙덤프는 stall이 있으므로 **트래픽 적은 시간대 + 한 인스턴스에만** 적용하는 게 안전합니다.
+
+---
+
+## Q9. GC 알고리즘 변경을 고려할 시점은?
+
+**A.** **pause time SLA를 못 맞출 때**입니다.
+
+- JDK 17+: G1 디폴트로 충분.
+- **수십~수백 GB 힙** + **ms 이하 pause 필요**: ZGC/Shenandoah.
+- **배치 작업**: Parallel GC.
+
+알고리즘 변경 전에 **힙 크기 + Young/Old 비율 + 통계 갱신** 같은 일반 튜닝을 먼저 해보는 게 순서입니다.
+
+---
+
+## Q10. 누수 사고 후 어떤 사후 조치를 하시나요?
+
+**A.** 4가지를 챙깁니다.
+
+1. **회귀 방지 테스트**: 누수 객체를 생성/회수하는 시나리오를 부하 테스트로.
+2. **모니터링 알람 강화**: Old Gen 사용량 임계 + 증가 추세 알람.
+3. **포스트모템 작성**: 무엇이/왜/어떻게 발견됐는지 팀 위키에.
+4. **유사 패턴 점검**: 같은 코드 패턴이 다른 곳에도 있는지 grep.
+
+이 절차가 없으면 같은 사고가 반복됩니다. 사고는 "이번만 막는" 것이 아니라 "다음을 막는" 데이터로 써야 합니다.

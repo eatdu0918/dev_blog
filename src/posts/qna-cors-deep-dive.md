@@ -7,84 +7,95 @@ date: '2026-04-26'
 categories: ['Web', 'Security', 'Network']
 ---
 
-## 핵심 요약
+## Q1. CORS는 무엇이고 왜 존재하나요?
 
-- **CORS는 보안 메커니즘이 아닙니다**. SOP(Same-Origin Policy)라는 브라우저 안전장치를 **완화**해 주는 규약.
-- 막는 것은 **브라우저**입니다. 서버는 응답을 정상적으로 보냈고, **읽지 못하게 차단**될 뿐.
-- 따라서 curl/Postman은 CORS 영향 없음. 같은 요청이 브라우저에서만 막히는 이유.
+**A.** **CORS는 보안 메커니즘이 아니라 SOP(Same-Origin Policy)를 완화하는 규약**입니다. 그리고 막는 건 서버가 아니라 **브라우저**입니다.
 
-## SOP, Origin, "Cross-Origin"
+서버는 응답을 정상적으로 보냈고, 브라우저가 다른 origin의 JS가 그 응답을 못 읽게 차단할 뿐입니다. 그래서 같은 요청이 curl/Postman에서는 되고 브라우저에서만 막힙니다.
 
-**Origin = scheme + host + port**. 셋 중 하나라도 다르면 cross-origin.
+Origin = `scheme + host + port` 셋 중 하나라도 다르면 cross-origin입니다. `https://a.com`과 `https://api.a.com`도 다른 origin입니다.
 
-- `https://a.com` ↔ `http://a.com`: 다름(scheme).
-- `https://a.com` ↔ `https://api.a.com`: 다름(host).
-- `https://a.com:443` ↔ `https://a.com:8443`: 다름(port).
+---
 
-## 단순 요청 vs Preflight
+## Q2. 단순 요청과 Preflight의 차이가 뭔가요?
 
-브라우저가 두 종류로 분기합니다.
+**A.** 브라우저가 두 종류로 분기합니다.
 
-### 단순 요청(Simple request) 조건
-- 메서드: GET / HEAD / POST.
-- Content-Type: `application/x-www-form-urlencoded`, `multipart/form-data`, `text/plain`.
-- 커스텀 헤더 없음(`Authorization`, `X-Custom` 등 X).
+**단순 요청**: GET/HEAD/POST + 제한된 Content-Type(`text/plain`, `urlencoded`, `multipart/form-data`) + 커스텀 헤더 없음. 바로 본 요청을 보냅니다.
 
-조건에 해당하면 **바로 본 요청**을 보내고, 응답에 `Access-Control-Allow-Origin`이 없으면 JS가 응답을 못 읽음.
+**Preflight**: 위 조건을 벗어나면 본 요청 전에 `OPTIONS`로 사전 허가를 확인합니다. 응답에 `Access-Control-Allow-Origin/Methods/Headers`가 있어야 본 요청 진행.
 
-### Preflight (`OPTIONS`)
+`Authorization` 헤더, `application/json` body는 거의 항상 preflight를 트리거합니다.
 
-조건을 벗어나면 본 요청 전에 **OPTIONS 사전 요청**으로 서버 허가를 확인.
+---
 
-- 요청 헤더: `Origin`, `Access-Control-Request-Method`, `Access-Control-Request-Headers`.
-- 응답 헤더: `Access-Control-Allow-Origin`, `Allow-Methods`, `Allow-Headers`, `Max-Age`(캐싱).
+## Q3. Preflight가 매 요청마다 가서 느려졌습니다. 어떻게 줄이나요?
 
-`Max-Age`로 preflight 응답을 일정 시간 캐시하면 매 요청마다 OPTIONS가 안 날아갑니다(보통 600~86400초).
+**A.** `Access-Control-Max-Age` 헤더로 preflight 응답을 캐시합니다. 보통 600~86400초.
 
-## credentials (쿠키/Authorization 동봉)
+```
+Access-Control-Max-Age: 86400
+```
 
-쿠키나 `Authorization` 헤더를 같이 보내려면 두 쪽 다 명시 필요.
+이러면 같은 origin/메서드/헤더 조합에 대해 24시간 동안 OPTIONS가 안 날아갑니다.
 
-- 클라이언트: `fetch(url, { credentials: 'include' })`.
-- 서버: `Access-Control-Allow-Credentials: true` + **`Access-Control-Allow-Origin`을 와일드카드(`*`) 금지**, 정확한 origin 반환.
+---
 
-가장 흔한 실수 1순위. `Allow-Origin: *` + credentials 조합은 브라우저가 거부.
+## Q4. 쿠키나 인증 헤더를 같이 보내려면 무엇을 설정해야 하나요?
 
-## 응답 헤더 주요 항목
+**A.** 양쪽 다 명시해야 합니다.
 
-- `Access-Control-Allow-Origin`: 허용 origin. 동적 반환 시 **`Vary: Origin`** 추가(캐시 오염 방지).
-- `Access-Control-Allow-Methods`: preflight에서만 의미.
-- `Access-Control-Allow-Headers`: 클라이언트가 보낼 커스텀 헤더 화이트리스트.
-- `Access-Control-Expose-Headers`: JS에서 읽게 할 응답 헤더(기본은 단순 헤더만 노출). 페이지네이션의 `X-Total-Count` 등.
-- `Access-Control-Max-Age`: preflight 캐시.
+- **클라이언트**: `fetch(url, { credentials: 'include' })`.
+- **서버**: `Access-Control-Allow-Credentials: true` + **`Access-Control-Allow-Origin`은 와일드카드 금지**, 정확한 origin 반환.
 
-## 자주 빠지는 함정
+`Allow-Origin: *` + credentials 조합은 브라우저가 거부합니다. 가장 흔한 실수 1순위입니다. 동적으로 origin을 반환할 때는 `Vary: Origin` 헤더를 같이 줘서 캐시 오염을 막습니다.
 
-- **에러 응답에 CORS 헤더 누락**: 4xx/5xx에도 헤더가 없으면 브라우저는 "CORS 에러"로 보고. 실제 원인은 다른 곳.
-- **프록시/CDN이 OPTIONS를 가로챔**: 백엔드까지 안 가는 케이스. 게이트웨이 설정 점검.
-- **리다이렉트 + preflight**: preflight 응답에서 redirect는 금지. 한 번에 끝나야 함.
-- **개발자 도구 Network 탭에서 preflight를 못 봐서 디버깅 헤맴**: "Other" 필터 또는 "All" 확인.
+---
 
-## CORS는 보안 도구가 아니다
+## Q5. CORS 에러가 나는데 실제 원인을 못 찾는 경우는?
 
-- 서버는 여전히 **인증/인가를 직접** 해야 합니다. CORS가 막아주는 건 "다른 origin의 JS가 응답을 읽는 것"뿐.
-- CSRF 방어를 CORS로 대체할 수 있다는 통념은 위험. CSRF는 SameSite 쿠키, 토큰 검증이 본 책임.
+**A.** 거의 항상 5가지 중 하나입니다.
 
-## 실무 해결 패턴
+1. **에러 응답(4xx/5xx)에 CORS 헤더 누락** → 브라우저는 "CORS 에러"로 보고하지만 실제 원인은 서버 에러.
+2. **프록시/CDN이 OPTIONS를 가로챔** → 백엔드까지 도달 못 함.
+3. **리다이렉트 응답 + preflight** → preflight에 redirect는 금지.
+4. **credentials + 와일드카드 origin** → 자동 거부.
+5. DevTools Network 탭에서 preflight 안 보여서 헤맴 → "All" 또는 "Other" 필터로 확인.
 
-1. **같은 origin으로 통합**: 프론트와 API를 같은 도메인 + 경로로 둠(Next.js의 API routes, 리버스 프록시). CORS 자체가 사라짐.
+---
+
+## Q6. CORS로 CSRF를 막을 수 있나요?
+
+**A.** **부분적으로**입니다. CORS는 "다른 origin의 JS가 응답을 읽는 것"을 막을 뿐, 요청 자체를 막지 않습니다. 
+
+다만 `application/json` + 커스텀 헤더 요청은 preflight가 강제되므로 외부 사이트의 단순 fetch는 막힙니다. 그래도 CSRF 방어의 본책임은 **SameSite 쿠키, CSRF 토큰, Origin/Referer 검증**입니다. CORS만 믿으면 안 됩니다.
+
+---
+
+## Q7. 실무에서 CORS 문제를 어떻게 깔끔하게 해결하시나요?
+
+**A.** 우선순위로 4가지를 시도합니다.
+
+1. **같은 origin으로 통합**: 리버스 프록시(Nginx) 또는 Next.js API routes로 프론트/백엔드를 한 도메인에. CORS 자체가 사라짐.
 2. **개발 환경 프록시**: Vite/CRA의 `proxy` 옵션으로 dev 서버가 백엔드로 포워딩.
-3. **명시적 화이트리스트**: 운영은 origin 목록을 환경변수로 관리.
-4. **인증이 필요하면 처음부터 credentials 흐름**으로 설계. 나중에 끼워 맞추면 헤더 누락 디버깅 지옥.
+3. **명시적 origin 화이트리스트**: 운영은 환경변수로 관리.
+4. **인증이 필요하면 처음부터 credentials 흐름** 으로 설계. 나중에 끼워 맞추면 디버깅 지옥.
 
-## 자주 헷갈리는 디테일
+---
 
-- 이미지 `<img>`나 `<script>` 태그로 가져오는 cross-origin 리소스는 **CORS 없이도 로드** 가능. 다만 canvas로 픽셀 읽기, JS로 응답 읽기 같은 건 막힘(`crossorigin` 속성 + CORS 응답 필요).
-- `fetch`의 `mode: 'no-cors'`는 응답을 **opaque**로 만들어 읽지 못하게 함. 회피책이 아님.
-- Service Worker, fetch from extension 등 환경에 따라 CORS 적용 범위 차이.
+## Q8. CORS와 CSP는 다른 건가요?
 
-## 면접 follow-up
+**A.** 무관합니다.
 
-- "왜 OPTIONS가 두 번 가지 않게 하려면?" → `Access-Control-Max-Age`로 preflight 캐시.
-- "공인 IP 두 개의 서버를 한 도메인으로 묶고 싶다면?" → 리버스 프록시로 같은 origin 흡수.
-- "CORS와 CSP의 관계?" → 무관. CSP는 페이지가 어떤 리소스를 로드/실행할지 통제. CORS는 cross-origin 응답 읽기 통제.
+- **CORS**: cross-origin 응답을 JS가 읽는 것을 통제.
+- **CSP(Content-Security-Policy)**: 페이지가 어떤 리소스를 로드/실행할지 통제(XSS 방어).
+
+둘 다 보안 헤더지만 막는 대상이 다릅니다. CSP는 `script-src`, `connect-src` 등으로 화이트리스트를 정합니다.
+
+---
+
+## Q9. `mode: 'no-cors'`로 fetch하면 CORS를 우회할 수 있나요?
+
+**A.** **아니요.** 회피책이 아닙니다. `no-cors`는 응답을 opaque로 만들어 JS가 본문을 읽을 수 없게 합니다. Service Worker가 캐시하는 정도의 용도지 일반 fetch에는 거의 의미가 없습니다.
+
+진짜 해결은 서버에 CORS 헤더를 추가하거나, 같은 origin으로 통합하는 것입니다.

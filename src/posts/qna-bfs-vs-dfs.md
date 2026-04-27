@@ -7,111 +7,108 @@ date: '2026-04-27'
 categories: ['CS', 'Algorithm']
 ---
 
-## 핵심 요약
+## Q1. BFS와 DFS의 차이를 한 줄로 설명해 주세요.
 
-- **BFS(너비 우선)**: 큐 사용, 가까운 노드부터. **최단 경로**(가중치 1) 찾기.
-- **DFS(깊이 우선)**: 스택/재귀, 한 길로 끝까지. **모든 경로 탐색**, 백트래킹.
-
-둘 다 시간 O(V+E), 공간 O(V).
-
-## BFS 구현
+**A.** BFS는 **큐**로 가까운 노드부터 너비 우선 탐색, DFS는 **스택/재귀**로 한 길 끝까지 깊이 우선 탐색합니다. 둘 다 시간 복잡도는 O(V+E), 공간은 O(V)지만 활용처가 다릅니다.
 
 ```javascript
-function bfs(start, graph) {
-  const visited = new Set([start]);
-  const queue = [start];
-  while (queue.length) {
-    const node = queue.shift();
-    for (const next of graph[node]) {
-      if (!visited.has(next)) {
-        visited.add(next);
-        queue.push(next);
-      }
-    }
-  }
-}
+// BFS
+const queue = [start];
+while (queue.length) { const n = queue.shift(); /* ... */ queue.push(next); }
+
+// DFS
+const stack = [start];
+while (stack.length) { const n = stack.pop(); /* ... */ stack.push(next); }
 ```
 
-`shift()`는 O(n) — 실무에선 deque 사용(JS는 인덱스 + head 포인터).
+자료구조만 바꾸면 거의 같은 코드입니다.
 
-## DFS 구현
+---
 
-재귀:
+## Q2. 언제 BFS, 언제 DFS를 쓰나요?
+
+**A.** 문제 유형으로 갈립니다.
+
+**BFS가 적합**:
+- 가중치 동일한 그래프의 **최단 경로** (미로 최소 이동, 단어 사다리).
+- 트리의 **레벨별 순회**.
+- 이분 그래프 판정.
+
+**DFS가 적합**:
+- **연결 요소** 찾기, 사이클 감지.
+- **위상 정렬**(DAG).
+- **백트래킹**(순열, 조합, N-Queens, 스도쿠).
+- 강한 연결 요소(Tarjan, Kosaraju).
+
+---
+
+## Q3. DFS는 재귀와 반복 중 무엇을 쓰나요?
+
+**A.** 재귀가 짧고 직관적이지만, **깊은 그래프에서는 스택 오버플로** 위험이 있어 반복 버전이 안전합니다.
+
 ```javascript
-function dfs(node, graph, visited = new Set()) {
+function dfs(node, graph, visited) {
   if (visited.has(node)) return;
   visited.add(node);
   for (const next of graph[node]) dfs(next, graph, visited);
 }
 ```
 
-스택:
-```javascript
-function dfsIter(start, graph) {
-  const visited = new Set();
-  const stack = [start];
-  while (stack.length) {
-    const node = stack.pop();
-    if (visited.has(node)) continue;
-    visited.add(node);
-    for (const next of graph[node]) stack.push(next);
-  }
-}
-```
+또 재귀 인자로 `visited`를 안 넘기면 함수 호출 간 공유되어 테스트 케이스 격리가 깨지는 버그가 자주 납니다.
 
-## 메모리/스택
+---
 
-- BFS: 같은 레벨의 노드를 모두 큐에 — 너비 큰 그래프에서 메모리↑.
-- DFS: 깊이 만큼 스택 — 깊이 큰 그래프에서 스택 오버플로 위험. 반복 버전이 안전.
+## Q4. BFS로 최단 경로를 찾을 수 없는 경우는 언제인가요?
 
-## 적용 사례
+**A.** **간선 가중치가 다를 때**입니다. BFS는 모든 간선을 동일 비용으로 가정하기 때문에 가중치 그래프에는 부정확한 답을 줍니다.
 
-### BFS
-- **최단 경로**(간선 가중치 동일).
-- **레벨별 처리**: 트리의 i번째 레벨.
-- 이분 그래프 판정.
-- 격자에서 최소 이동 횟수.
-
-### DFS
-- **연결 요소** 찾기.
-- **사이클 감지**(방향/무방향).
-- **위상 정렬**(DAG).
-- **백트래킹**: 순열, 조합, N-Queens, 스도쿠.
-- **강한 연결 요소**(Tarjan, Kosaraju).
-
-## 가중치 그래프
-
-- 양수 가중치 → **Dijkstra**(우선순위 큐).
-- 음수 가중치 → **Bellman-Ford**, 음수 사이클 감지.
+대안:
+- 양수 가중치 → **Dijkstra** (우선순위 큐).
+- 음수 가중치 → **Bellman-Ford** (음수 사이클 감지 가능).
 - 모든 쌍 → **Floyd-Warshall** O(V³).
 
-BFS는 가중치가 모두 같을 때만 최단.
+---
 
-## 트리 순회
+## Q5. 방향 그래프에서 사이클은 어떻게 감지하나요?
 
-DFS의 변종:
-- **전위(Pre-order)**: 루트 → 좌 → 우.
-- **중위(In-order)**: 좌 → 루트 → 우. BST에서 정렬 결과.
-- **후위(Post-order)**: 좌 → 우 → 루트. 자식부터 처리(예: 폴더 크기 계산).
+**A.** DFS + 노드 상태 3가지로 추적합니다.
 
-BFS의 트리 적용 = 레벨 순회.
+- `WHITE`(미방문) → `GRAY`(진행 중) → `BLACK`(완료).
+- DFS 도중 GRAY 노드를 다시 만나면 **back edge** = 사이클.
 
-## 면접에서 자주 나오는 그래프 문제
+무방향 그래프는 더 간단해서 부모를 제외한 방문 노드를 만나면 사이클입니다.
 
-- **단어 사다리(Word Ladder)**: BFS — 한 글자 변경으로 도달.
-- **섬의 개수(Number of Islands)**: BFS/DFS 둘 다 가능.
-- **코스 스케줄(Course Schedule)**: 위상 정렬(DFS) 또는 Kahn(BFS).
-- **미로 최단 경로**: BFS.
-- **모든 경로 출력**: DFS + 백트래킹.
+위상 정렬은 사이클이 없는 DAG에서만 가능하므로 같은 알고리즘으로 검사합니다.
 
-## 자주 헷갈리는 디테일
+---
 
-- DFS 재귀에서 `visited`를 인자로 넘기지 않으면 **테스트 케이스 간 공유** 버그. 함수 안에 매번 생성 또는 명시적 reset.
-- BFS는 큐, DFS는 스택을 쓴다 — 자료구조만 바꾸면 같은 코드.
-- 양방향 BFS(Bidirectional)로 탐색 공간 절반 — 단어 사다리 등에 효과적.
+## Q6. 트리 순회 종류와 차이는요?
 
-## 면접 follow-up
+**A.** DFS의 변종 3가지 + BFS의 레벨 순회.
 
-- "DFS 재귀의 단점?" → 깊은 그래프에서 스택 오버플로. 반복 버전 또는 명시적 스택.
-- "방향 그래프에서 사이클 검사?" → DFS + 진행 중(visiting) 상태 추적. back edge 발견 = 사이클.
-- "BFS로 최단 경로 못 찾는 그래프?" → 가중치가 다를 때. Dijkstra 필요.
+- **전위(Pre-order)** 루트 → 좌 → 우: 트리 복제.
+- **중위(In-order)** 좌 → 루트 → 우: BST에서 정렬된 결과.
+- **후위(Post-order)** 좌 → 우 → 루트: 자식부터 처리(폴더 크기 계산, 트리 삭제).
+- **레벨 순회**: BFS. 같은 깊이 노드를 묶어 처리.
+
+---
+
+## Q7. 양방향 BFS는 무엇이고 언제 쓰나요?
+
+**A.** 시작과 끝에서 동시에 BFS를 진행해 중간에서 만나면 종료하는 기법입니다. 탐색 공간이 거의 절반으로 줄어듭니다.
+
+분기 인수가 큰 그래프(단어 사다리, 퍼즐 등)에서 일반 BFS의 시간을 크게 단축합니다. 단, 양방향에서 같은 그래프를 탐색해야 하므로 양방향 그래프 또는 역방향 인접 리스트가 필요합니다.
+
+---
+
+## Q8. 면접에서 자주 나오는 BFS/DFS 문제는 뭔가요?
+
+**A.** 빈출 5가지:
+
+1. **섬의 개수**(Number of Islands) — BFS/DFS 둘 다 가능.
+2. **단어 사다리**(Word Ladder) — BFS, 양방향 BFS면 더 빠름.
+3. **코스 스케줄**(Course Schedule) — 위상 정렬(DFS) 또는 Kahn(BFS).
+4. **미로 최단 경로** — BFS.
+5. **모든 경로 출력 / N-Queens** — DFS + 백트래킹.
+
+문제를 보고 "최단 = BFS, 모든 경우 = DFS"로 1차 분류한 뒤 디테일을 채우면 됩니다.
